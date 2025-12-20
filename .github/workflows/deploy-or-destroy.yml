@@ -66,8 +66,15 @@ jobs:
       - name: Verificar existência do RDS
         id: rds_check
         run: |
-          RDS_EXISTS=$(aws rds describe-db-instances --db-instance-identifier $DB_INSTANCE_IDENTIFIER --query 'DBInstances[0].DBInstanceIdentifier' --output text 2>/dev/null)
-          if [ "$RDS_EXISTS" != "None" ]; then
+          set +e
+          RDS_EXISTS=$(aws rds describe-db-instances \
+            --db-instance-identifier $DB_INSTANCE_IDENTIFIER \
+            --query 'DBInstances[0].DBInstanceIdentifier' \
+            --output text 2>/dev/null)
+          STATUS=$?
+          set -e
+
+          if [ $STATUS -eq 0 ] && [ "$RDS_EXISTS" != "None" ]; then
             echo "rds_exists=true" >> $GITHUB_OUTPUT
             echo "✅ RDS encontrado: $RDS_EXISTS"
           else
