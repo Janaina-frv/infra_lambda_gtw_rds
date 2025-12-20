@@ -6,7 +6,6 @@ resource "aws_lambda_function" "items" {
   handler = "com.example.Handler::handleRequest"
 
   filename         = "lambda.jar"
-  source_code_hash = filebase64sha256("lambda.jar")
 
   memory_size = 512
   timeout     = 10
