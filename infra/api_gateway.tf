@@ -1,0 +1,45 @@
+resource "aws_apigatewayv2_api" "http_api" {
+  name          = var.api_name
+  protocol_type = "HTTP"
+
+  description = "API HTTP para integração com Lambda (futura)"
+}
+
+## Staged de publicacao da API Gateway
+resource "aws_apigatewayv2_stage" "default" {
+  api_id      = aws_apigatewayv2_api.http_api.id
+  name        = "$default"
+  auto_deploy = true
+}
+
+## Rota GET para testar a API Gateway
+resource "aws_apigatewayv2_route" "health" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "GET /health"
+}
+
+## Integrando a API com a Lambda
+resource "aws_apigatewayv2_integration" "items_lambda" {
+  api_id           = aws_apigatewayv2_api.http_api.id
+  integration_type = "AWS_PROXY"
+
+  integration_uri  = aws_lambda_function.items.invoke_arn
+  payload_format_version = "2.0"
+}
+
+## Rota POST que receberá 4 campos e chamará a Lambda
+resource "aws_apigatewayv2_route" "post_items" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "POST /items"
+  target    = "integrations/${aws_apigatewayv2_integration.items_lambda.id}"
+}
+
+## Permissão para o API Gateway invocar a Lambda
+resource "aws_lambda_permission" "allow_api_gateway" {
+  statement_id  = "AllowApiGatewayInvokeItems"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.items.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+}
