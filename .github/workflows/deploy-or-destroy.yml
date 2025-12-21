@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: destroy  # apply | destroy
+      TF_ACTION: apply  # apply | destroy
       AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
       LAMBDA_FUNCTION_NAME: items-api-lambda
@@ -441,6 +441,11 @@ jobs:
         if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
         working-directory: infra
         run: |
-          echo "Destruindo VPC..."
-          terraform destroy -target=aws_vpc.${VPC_RESOURCE_NAME} -auto-approve
+          echo "Destruindo recursos dependentes da VPC..."
+          terraform destroy -target=aws_security_group.lambda_sg -auto-approve
+          terraform destroy -target=aws_security_group.rds_sg -auto-approve
+          terraform destroy -target=aws_subnet.private_a -auto-approve
+          terraform destroy -target=aws_subnet.private_b -auto-approve
+          echo "Destruindo a VPC..."
+          terraform destroy -target=aws_vpc.this_vpc -auto-approve
 
