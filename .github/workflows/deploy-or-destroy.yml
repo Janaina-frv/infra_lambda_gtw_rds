@@ -284,16 +284,23 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Importar Option Group se existir
+        if: steps.get_db_option_group.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform import aws_db_option_group.this_option_group $DB_OPTION_GROUP_NAME || true
+
       - name: Destroy Option Group
         if: env.TF_ACTION == 'destroy' && steps.get_db_option_group.outputs.exists == 'true'
         working-directory: infra
         run: |
           terraform destroy -target=aws_db_option_group.this_option_group -auto-approve
 
+
       - name: Obter DB Subnet Group
         id: get_db_subnet_group
         run: |
-          set -x  # loga cada comando no pipeline
+          set -x
           SUBNET_GROUP_NAME="app-db-subnet-group"
           echo "Verificando Subnet Group: $SUBNET_GROUP_NAME"
           
@@ -311,12 +318,19 @@ jobs:
           else
             echo "DB Subnet Group NÃO encontrado"
             echo "exists=false" >> $GITHUB_OUTPUT
-          fi
+
+      - name: Importar DB Subnet Group se existir
+        if: steps.get_db_subnet_group.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Importando DB Subnet Group para o Terraform state..."
+          terraform import aws_db_subnet_group.this_subnet_group $DB_SUBNET_GROUP_NAME || true
 
       - name: Destroy DB Subnet Group
         if: env.TF_ACTION == 'destroy' && steps.get_db_subnet_group.outputs.exists == 'true'
         working-directory: infra
         run: |
+          echo "Destruindo DB Subnet Group..."
           terraform destroy -target=aws_db_subnet_group.this_subnet_group -auto-approve
 
       - name: Obter Security Group do RDS
