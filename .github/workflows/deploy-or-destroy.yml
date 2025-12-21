@@ -391,19 +391,17 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Baixar dependência AWS Lambda Java Core
+      - name: Compilar Lambda com Maven
         if: env.TF_ACTION == 'apply'
+        working-directory: lambda
         run: |
-          mkdir -p libs
-          curl -o libs/aws-lambda-java-core.jar https://repo1.maven.org/maven2/com/amazonaws/aws-lambda-java-core/1.2.1/aws-lambda-java-core-1.2.1.jar
+          mvn clean package
 
-      - name: Compilar projeto e gerar JAR
+      - name: Copiar JAR gerado para a pasta de deploy
         if: env.TF_ACTION == 'apply'
         run: |
           mkdir -p infra/build/lambda
-          javac -cp libs/aws-lambda-java-core.jar -d infra/build/lambda $LAMBDA_PATH_JAVA
-          cd infra/build/lambda
-          jar cf hello-lambda.jar $LAMBDA_PATH_CLASS
+          cp lambda/target/hello-lambda-1.0.jar infra/build/lambda/hello-lambda.jar
 
       - name: Executar apply da Lambda
         if: env.TF_ACTION == 'apply' && steps.lambda_check.outputs.exists == 'false'
@@ -417,6 +415,12 @@ jobs:
 
 
 
+      - name: Destroy IAM Role
+        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy -target=aws_iam_role.lambda_exec_role -auto-approve
+
       - name: Executar destroy da VPC
         if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
         working-directory: infra
@@ -424,8 +428,3 @@ jobs:
           echo "Destruindo VPC..."
           terraform destroy -target=aws_vpc.${VPC_RESOURCE_NAME} -auto-approve
 
-      - name: Destroy IAM Role
-        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          terraform destroy -target=aws_iam_role.lambda_exec_role -auto-approve
