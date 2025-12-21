@@ -17,6 +17,7 @@ resource "aws_apigatewayv2_integration" "items_lambda" {
 resource "aws_apigatewayv2_route" "health" {
   api_id    = aws_apigatewayv2_api.http_api.id
   route_key = "GET /health"
+  target    = "integrations/${aws_apigatewayv2_integration.items_lambda.id}"
 }
 
 resource "aws_apigatewayv2_route" "post_items" {
@@ -25,11 +26,15 @@ resource "aws_apigatewayv2_route" "post_items" {
   target    = "integrations/${aws_apigatewayv2_integration.items_lambda.id}"
 }
 
-# Stage (depois de rotas e integrações)
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.http_api.id
   name        = "$default"
   auto_deploy = true
+
+  depends_on = [
+    aws_apigatewayv2_route.health,
+    aws_apigatewayv2_route.post_items
+  ]
 }
 
 resource "aws_lambda_permission" "allow_api_gateway" {
@@ -37,5 +42,5 @@ resource "aws_lambda_permission" "allow_api_gateway" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.items.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+  source_arn = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*/*"
 }
