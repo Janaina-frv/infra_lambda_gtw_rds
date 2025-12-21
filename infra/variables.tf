@@ -10,16 +10,19 @@ variable "api_name" {
 }
 
 variable "db_name" {
-  type    = string
-  default = "appdb"
+  type        = string
+  default     = "itemsdb"
+  description = "Nome do banco de dados"
 }
 
 variable "db_username" {
-  type    = string
-  default = "postgres"
+  type        = string
+  default     = "admin"
+  description = "Usuário do banco"
 }
 
 variable "db_password" {
-  type      = string
-  sensitive = true
+  type        = string
+  description = "Senha do banco"
+  sensitive   = true
 }
