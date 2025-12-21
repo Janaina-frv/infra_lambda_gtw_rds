@@ -133,33 +133,30 @@ jobs:
       - name: Verificar e Obter VPC pelo Name
         id: get_vpc
         run: |
-          set -e
-          
           VPC_ID=$(aws ec2 describe-vpcs \
             --filters "Name=tag:Name,Values=app-vpc" \
             --query "Vpcs[0].VpcId" \
-            --output text)
+            --output text 2>/dev/null || true)
           
           if [ -z "$VPC_ID" ] || [ "$VPC_ID" = "None" ]; then
             echo "❌ VPC não encontrada"
             echo "exists=false" >> $GITHUB_OUTPUT
           else
-            if aws ec2 describe-vpcs --vpc-ids "$VPC_ID" >/dev/null 2>&1; then
-              echo "✅ VPC encontrada: $VPC_ID"
-              echo "exists=true" >> $GITHUB_OUTPUT
-              echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
-            else
-              echo "⚠️ VPC não encontrada (ID obtido, mas não existe mais)"
-              echo "exists=false" >> $GITHUB_OUTPUT
-            fi
+            echo "✅ VPC encontrada: $VPC_ID"
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
           fi
 
-      - name: Importar VPC se existir
+      - name: Importar VPC para o state (se necessário)
         if: env.TF_ACTION == 'destroy' && steps.get_vpc.outputs.exists == 'true'
         working-directory: infra
         run: |
-          echo "Importando VPC para o estado..."
-          terraform import aws_vpc.${VPC_RESOURCE_NAME} ${VPC_ID}
+          if terraform state show aws_vpc.${VPC_RESOURCE_NAME} >/dev/null 2>&1; then
+            echo "ℹ️ VPC já está no state do Terraform"
+          else
+            echo "📥 Importando VPC para o state..."
+            terraform import aws_vpc.${VPC_RESOURCE_NAME} ${VPC_ID}
+          fi
 
       #Verificar existencia de API Gateway e importar
 
