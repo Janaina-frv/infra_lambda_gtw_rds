@@ -25,7 +25,7 @@ jobs:
       LAMBDA_PATH_JAVA: lambda/src/main/java/com/example/Handler.java
       LAMBDA_PATH_CLASS: com/example/Handler.class
       VPC_RESOURCE_NAME: this_vpc
-      $API_NAME: items-api
+      API_NAME: items-api
       API_RESOURCE_NAME: http_api
       IAM_ROLE_RESOURCE_NAME: lambda_exec_role
       RDS_SG_RESOURCE_NAME: rds_sg
