@@ -66,7 +66,6 @@ resource "aws_lambda_function" "items" {
   handler = var.lambda_handler
 
   filename         = var.lambda_jar_file
-  source_code_hash = filebase64sha256(var.lambda_jar_file)
 
   memory_size = var.lambda_memory
   timeout     = var.lambda_timeout

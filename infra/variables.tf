@@ -46,3 +46,7 @@ variable "db_engine_version" {
   description = "Versão do Postgres"
   default     = "15.4"
 }
+
+variable "lambda_jar_file" {
+  default = "../build/libs/lambda.jar"  # exemplo, depende de onde o jar é gerado
+}

@@ -17,17 +17,40 @@ jobs:
       AWS_REGION: us-east-1
       AWS_ACCOUNT_ID: 757367947438
       TF_ACTION: apply  # apply | destroy
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+
+      # Lambda
+      FUNCTION_NAME: items-api-lambda
+      LAMBDA_JAR_NAME: lambda.jar
+
+      # RDS
+      DB_INSTANCE_IDENTIFIER: items-db
+
+      # API Gateway
+      API_NAME: items-api
+
+      # VPC
+      VPC_NAME: items-vpc
 
     steps:
       - name: Checkout código
         uses: actions/checkout@v3
 
-      - name: Autenticar com AWS via OIDC
+      - name: Configurar AWS via OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::757367947438:role/GitHubOIDCRole
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build da Lambda (Java)
+        working-directory: lambda
+        run: |
+          echo "🛠️ Build da Lambda..."
+          ./gradlew clean build   # ou mvn package se usar Maven
+          cp build/libs/*.jar ../infra/${{ env.LAMBDA_JAR_NAME }}
+
+      - name: Verificar arquivo Lambda
+        run: |
+          ls -l infra/${{ env.LAMBDA_JAR_NAME }}
 
       - name: Instalar Terraform
         uses: hashicorp/setup-terraform@v2
@@ -45,13 +68,9 @@ jobs:
       - name: Terraform Apply
         if: env.TF_ACTION == 'apply'
         working-directory: infra
-        run: |
-          echo "🚀 Aplicando toda a infraestrutura..."
-          terraform apply -auto-approve -var="db_password=${{ env.DB_PASSWORD }}"
+        run: terraform apply -auto-approve -var="db_password=${{ secrets.DB_PASSWORD }}"
 
       - name: Terraform Destroy
         if: env.TF_ACTION == 'destroy'
         working-directory: infra
-        run: |
-          echo "🛑 Destruindo toda a infraestrutura..."
-          terraform destroy -auto-approve -var="db_password=${{ env.DB_PASSWORD }}"
+        run: terraform destroy -auto-approve -var="db_password=${{ secrets.DB_PASSWORD }}"
