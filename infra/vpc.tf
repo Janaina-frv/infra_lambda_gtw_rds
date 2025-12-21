@@ -38,7 +38,6 @@ resource "aws_vpc" "this" {
 
   tags = {
     Name        = "app-vpc"
-    Environment = var.environment
     Project     = "app"
   }
 }
@@ -54,7 +53,6 @@ resource "aws_subnet" "private_a" {
 
   tags = {
     Name        = "private-a"
-    Environment = var.environment
     Project     = "app"
   }
 }
@@ -66,7 +64,6 @@ resource "aws_subnet" "private_b" {
 
   tags = {
     Name        = "private-b"
-    Environment = var.environment
     Project     = "app"
   }
 }
@@ -81,7 +78,6 @@ resource "aws_db_subnet_group" "this" {
 
   tags = {
     Name        = "app-db-subnet-group"
-    Environment = var.environment
     Project     = "app"
   }
 
