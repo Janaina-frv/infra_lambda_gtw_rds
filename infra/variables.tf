@@ -44,7 +44,7 @@ variable "db_allocated_storage" {
 
 variable "db_engine_version" {
   description = "Versão do Postgres"
-  default     = "15.4"
+  default     = "15.3"
 }
 
 variable "lambda_function_name" {
