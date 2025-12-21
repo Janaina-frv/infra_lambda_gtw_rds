@@ -171,12 +171,7 @@ jobs:
           echo "Importando VPC para o estado..."
           terraform import aws_vpc.${VPC_RESOURCE_NAME} ${VPC_ID}
 
-      - name: Executar destroy da VPC
-        if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          echo "Destruindo VPC..."
-          terraform destroy -target=aws_vpc.${VPC_RESOURCE_NAME} -auto-approve
+
 
       - name: Executar apply da VPC
         if: env.TF_ACTION == 'apply' && steps.vpc_check.outputs.exists == 'false'
@@ -379,7 +374,12 @@ jobs:
 
 
 
-          
+      - name: Executar destroy da VPC
+        if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Destruindo VPC..."
+          terraform destroy -target=aws_vpc.${VPC_RESOURCE_NAME} -auto-approve
 
       - name: Destroy IAM Role
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
