@@ -73,21 +73,47 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Importar policy attachment basic exec
+      - name: Importar policy attachment basic exec (se existir)
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
-          terraform import \
-          aws_iam_role_policy_attachment.lambda_basic_exec \
-          ${IAM_ROLE_NAME}/arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+          POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 
-      - name: Importar policy attachment VPC access
+          ATTACHED=$(aws iam list-attached-role-policies \
+            --role-name $IAM_ROLE_NAME \
+            --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" \
+            --output text)
+
+          if [ -n "$ATTACHED" ]; then
+            echo "Policy basic exec anexada, importando..."
+            terraform import \
+              aws_iam_role_policy_attachment.lambda_basic_exec \
+              ${IAM_ROLE_NAME}/${POLICY_ARN}
+          else
+            echo "Policy basic exec NÃO está anexada, pulando import"
+          fi
+      
+
+      - name: Importar policy attachment VPC access (se existir)
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
-          terraform import \
-          aws_iam_role_policy_attachment.lambda_vpc_access \
-          ${IAM_ROLE_NAME}/arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+          POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+
+          ATTACHED=$(aws iam list-attached-role-policies \
+            --role-name $IAM_ROLE_NAME \
+            --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" \
+            --output text)
+
+          if [ -n "$ATTACHED" ]; then
+            echo "Policy VPC access anexada, importando..."
+            terraform import \
+              aws_iam_role_policy_attachment.lambda_vpc_access \
+              ${IAM_ROLE_NAME}/${POLICY_ARN}
+          else
+            echo "Policy VPC access NÃO está anexada, pulando import"
+          fi
+      
 
       - name: Destroy policy attachments
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
