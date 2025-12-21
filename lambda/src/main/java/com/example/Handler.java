@@ -19,16 +19,21 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent event, Context context) {
 
         try {
-            // 1️⃣ Ler o body exatamente como veio
+            context.getLogger().log("Evento recebido: " + event);
+            context.getLogger().log("Body recebido: " + event.getBody());
+
             String rawBody = event.getBody();
 
-            // 2️⃣ Converter JSON → objeto
+            if (rawBody == null || rawBody.isEmpty()) {
+                throw new RuntimeException("Body está vazio ou null");
+            }
+
             ItemRequest request = mapper.readValue(rawBody, ItemRequest.class);
 
-            // 3️⃣ Gravar no banco
+            context.getLogger().log("Item: " + request.getDescricao() + " | " + request.getNota());
+
             salvarNoBanco(request);
 
-            // 4️⃣ Retornar exatamente o JSON recebido
             return APIGatewayV2HTTPResponse.builder()
                     .withStatusCode(201)
                     .withHeaders(Map.of("Content-Type", "application/json"))
@@ -36,12 +41,18 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
                     .build();
 
         } catch (Exception e) {
+            context.getLogger().log("ERRO: " + e.toString());
+            for (StackTraceElement s : e.getStackTrace()) {
+                context.getLogger().log(s.toString());
+            }
+
             return APIGatewayV2HTTPResponse.builder()
                     .withStatusCode(500)
                     .withBody("{\"erro\":\"Erro ao processar requisição\"}")
                     .build();
         }
     }
+
 
     private void salvarNoBanco(ItemRequest item) throws Exception {
 
