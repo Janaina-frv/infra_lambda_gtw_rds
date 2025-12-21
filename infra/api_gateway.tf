@@ -1,52 +1,23 @@
-#####################################
-# API Gateway HTTP
-#####################################
-
+# API
 resource "aws_apigatewayv2_api" "http_api" {
   name          = var.api_name
   protocol_type = "HTTP"
   description   = "API HTTP para integração com Lambda"
-
-  tags = {
-    Name        = var.api_name
-    Environment = var.environment
-    Project     = "app"
-  }
 }
 
-#####################################
-# Stage de publicação da API
-#####################################
-
-resource "aws_apigatewayv2_stage" "default" {
-  api_id      = aws_apigatewayv2_api.http_api.id
-  name        = "$default"
-  auto_deploy = true
+# Integração Lambda
+resource "aws_apigatewayv2_integration" "items_lambda" {
+  api_id                = aws_apigatewayv2_api.http_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.items.invoke_arn
+  payload_format_version = "2.0"
 }
 
-#####################################
-# Rota GET para Health Check
-#####################################
-
+# Rotas
 resource "aws_apigatewayv2_route" "health" {
   api_id    = aws_apigatewayv2_api.http_api.id
   route_key = "GET /health"
 }
-
-#####################################
-# Integração da API com Lambda
-#####################################
-
-resource "aws_apigatewayv2_integration" "items_lambda" {
-  api_id                   = aws_apigatewayv2_api.http_api.id
-  integration_type          = "AWS_PROXY"
-  integration_uri           = aws_lambda_function.items.invoke_arn
-  payload_format_version    = "2.0"
-}
-
-#####################################
-# Rota POST /items -> Lambda
-#####################################
 
 resource "aws_apigatewayv2_route" "post_items" {
   api_id    = aws_apigatewayv2_api.http_api.id
@@ -54,9 +25,12 @@ resource "aws_apigatewayv2_route" "post_items" {
   target    = "integrations/${aws_apigatewayv2_integration.items_lambda.id}"
 }
 
-#####################################
-# Permissão para API Gateway invocar Lambda
-#####################################
+# Stage (depois de rotas e integrações)
+resource "aws_apigatewayv2_stage" "default" {
+  api_id      = aws_apigatewayv2_api.http_api.id
+  name        = "$default"
+  auto_deploy = true
+}
 
 resource "aws_lambda_permission" "allow_api_gateway" {
   statement_id  = "AllowApiGatewayInvokeItems"

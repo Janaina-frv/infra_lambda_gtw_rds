@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: apply  # apply | destroy
+      TF_ACTION: destroy  # apply | destroy
       AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
       LAMBDA_FUNCTION_NAME: items-api-lambda
@@ -229,7 +229,7 @@ jobs:
       - name: Verificar existência da API Gateway
         id: api_check
         run: |
-          if aws apigatewayv2 get-api --rest-api-id $API_ID >/dev/null 2>&1; then
+          if aws apigatewayv2 get-api --api-id $API_ID >/dev/null 2>&1; then
             echo "✅ API Gateway encontrada: $API_ID"
             echo "exists=true" >> $GITHUB_OUTPUT
           else
