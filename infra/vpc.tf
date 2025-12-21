@@ -86,10 +86,3 @@ resource "aws_db_subnet_group" "this_subnet_group" {
     aws_subnet.private_b
   ]
 }
-
-resource "aws_db_option_group" "this_option_group" {
-  name                     = "option-group"
-  engine_name              = "postgres"
-  major_engine_version     = "17"
-  option_group_description = "Option group importado"
-}

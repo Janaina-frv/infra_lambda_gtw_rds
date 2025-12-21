@@ -265,38 +265,6 @@ jobs:
         run: |
           terraform destroy -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} -auto-approve
 
-      - name: Obter Option Group
-        id: get_db_option_group
-        run: |
-          OPTION_GROUP_NAME="optionGroup"
-          
-          EXISTS=$(aws rds describe-option-groups \
-            --option-group-name $OPTION_GROUP_NAME \
-            --query "OptionGroupsList[0].OptionGroupName" \
-            --output text 2>/dev/null || echo "")
-          
-          if [ -n "$EXISTS" ] && [ "$EXISTS" != "None" ]; then
-            echo "Option Group encontrado: $OPTION_GROUP_NAME"
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "DB_OPTION_GROUP_NAME=$OPTION_GROUP_NAME" >> $GITHUB_ENV
-          else
-            echo "Option Group NÃO encontrado"
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Importar Option Group se existir
-        if: steps.get_db_option_group.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          terraform import aws_db_option_group.this_option_group $DB_OPTION_GROUP_NAME || true
-
-      - name: Destroy Option Group
-        if: env.TF_ACTION == 'destroy' && steps.get_db_option_group.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          terraform destroy -target=aws_db_option_group.this_option_group -auto-approve
-
-
       - name: Obter DB Subnet Group
         id: get_db_subnet_group
         run: |
