@@ -133,17 +133,18 @@ jobs:
       - name: Verificar e Obter VPC pelo Name
         id: get_vpc
         run: |
+          set -e
+          
           VPC_ID=$(aws ec2 describe-vpcs \
             --filters "Name=tag:Name,Values=app-vpc" \
             --query "Vpcs[0].VpcId" \
             --output text)
           
           if [ -z "$VPC_ID" ] || [ "$VPC_ID" = "None" ]; then
-            echo "VPC não encontrada"
+            echo "❌ VPC não encontrada"
             echo "exists=false" >> $GITHUB_OUTPUT
           else
-            # Verifica se a VPC realmente existe
-            if aws ec2 describe-vpcs --vpc-ids $VPC_ID >/dev/null 2>&1; then
+            if aws ec2 describe-vpcs --vpc-ids "$VPC_ID" >/dev/null 2>&1; then
               echo "✅ VPC encontrada: $VPC_ID"
               echo "exists=true" >> $GITHUB_OUTPUT
               echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
@@ -151,9 +152,10 @@ jobs:
               echo "⚠️ VPC não encontrada (ID obtido, mas não existe mais)"
               echo "exists=false" >> $GITHUB_OUTPUT
             fi
+          fi
 
       - name: Importar VPC se existir
-        if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
+        if: env.TF_ACTION == 'destroy' && steps.get_vpc.outputs.exists == 'true'
         working-directory: infra
         run: |
           echo "Importando VPC para o estado..."
