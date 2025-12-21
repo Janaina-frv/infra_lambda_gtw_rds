@@ -224,71 +224,71 @@ jobs:
 
 
 
-  - name: Obter Security Group do RDS
-    id: get_rds_sg
-    run: |
-      SG_ID=$(aws ec2 describe-security-groups \
-        --filters "Name=group-name,Values=rds-sg" \
-        --query "SecurityGroups[0].GroupId" \
-        --output text)
-      
-      if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
-        echo "Security Group do RDS não encontrado"
-        echo "exists=false" >> $GITHUB_OUTPUT
-        exit 0
-      fi
-      
-      echo "Security Group encontrado: $SG_ID"
-      echo "exists=true" >> $GITHUB_OUTPUT
-      echo "RDS_SG_ID=$SG_ID" >> $GITHUB_ENV
+      - name: Obter Security Group do RDS
+        id: get_rds_sg
+        run: |
+          SG_ID=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=rds-sg" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text)
+          
+          if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
+            echo "Security Group do RDS não encontrado"
+            echo "exists=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "Security Group encontrado: $SG_ID"
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "RDS_SG_ID=$SG_ID" >> $GITHUB_ENV
 
-  - name: Importar Security Group do RDS
-    if: env.TF_ACTION == 'destroy' && steps.get_rds_sg.outputs.exists == 'true'
-    working-directory: infra
-    run: |
-      terraform import aws_security_group.${RDS_SG_RESOURCE_NAME} ${RDS_SG_ID}
+      - name: Importar Security Group do RDS
+        if: env.TF_ACTION == 'destroy' && steps.get_rds_sg.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform import aws_security_group.${RDS_SG_RESOURCE_NAME} ${RDS_SG_ID}
 
-  - name: Obter RDS Instance pelo identifier
-    id: get_rds
-    run: |
-      DB_ID="${DB_INSTANCE_IDENTIFIER}"
-      
-      if aws rds describe-db-instances \
-        --db-instance-identifier "$DB_ID" >/dev/null 2>&1; then
-        echo "RDS encontrada: $DB_ID"
-        echo "exists=true" >> $GITHUB_OUTPUT
-        echo "DB_INSTANCE_ID=$DB_ID" >> $GITHUB_ENV
-      else
-        echo "RDS não encontrada"
-        echo "exists=false" >> $GITHUB_OUTPUT
-      fi
+      - name: Obter RDS Instance pelo identifier
+        id: get_rds
+        run: |
+          DB_ID="${DB_INSTANCE_IDENTIFIER}"
+          
+          if aws rds describe-db-instances \
+            --db-instance-identifier "$DB_ID" >/dev/null 2>&1; then
+            echo "RDS encontrada: $DB_ID"
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "DB_INSTANCE_ID=$DB_ID" >> $GITHUB_ENV
+          else
+            echo "RDS não encontrada"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
 
-  - name: Importar RDS Instance
-    if: env.TF_ACTION == 'destroy' && steps.get_rds.outputs.exists == 'true'
-    working-directory: infra
-    run: |
-      terraform import aws_db_instance.${RDS_DB_RESOURCE_NAME} ${DB_INSTANCE_ID}
+      - name: Importar RDS Instance
+        if: env.TF_ACTION == 'destroy' && steps.get_rds.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform import aws_db_instance.${RDS_DB_RESOURCE_NAME} ${DB_INSTANCE_ID}
 
-  - name: Destroy RDS Instance
-    if: env.TF_ACTION == 'destroy' && steps.get_rds.outputs.exists == 'true'
-    working-directory: infra
-    run: |
-      terraform destroy -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} -auto-approve
+      - name: Destroy RDS Instance
+        if: env.TF_ACTION == 'destroy' && steps.get_rds.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} -auto-approve
 
-  - name: Destroy Security Group do RDS
-    if: env.TF_ACTION == 'destroy' && steps.get_rds_sg.outputs.exists == 'true'
-    working-directory: infra
-    run: |
-      terraform destroy -target=aws_security_group.${RDS_SG_RESOURCE_NAME} -auto-approve
+      - name: Destroy Security Group do RDS
+        if: env.TF_ACTION == 'destroy' && steps.get_rds_sg.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy -target=aws_security_group.${RDS_SG_RESOURCE_NAME} -auto-approve
 
-  - name: Apply RDS e Security Group
-    if: env.TF_ACTION == 'apply' && steps.get_rds.outputs.exists == 'false'
-    working-directory: infra
-    run: |
-      terraform apply \
-        -target=aws_security_group.${RDS_SG_RESOURCE_NAME} \
-        -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} \
-        -auto-approve
+      - name: Apply RDS e Security Group
+        if: env.TF_ACTION == 'apply' && steps.get_rds.outputs.exists == 'false'
+        working-directory: infra
+        run: |
+          terraform apply \
+            -target=aws_security_group.${RDS_SG_RESOURCE_NAME} \
+            -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} \
+            -auto-approve
 
 
 
