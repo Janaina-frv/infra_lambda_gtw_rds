@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Map;
 
 public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
@@ -17,17 +18,16 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
 
     private void criarTabelaSeNaoExistir(Connection conn) throws SQLException {
         String sql = """
-        CREATE TABLE IF NOT EXISTS items (
-            id SERIAL PRIMARY KEY,
-            descricao VARCHAR(255) NOT NULL,
-            nota DOUBLE PRECISION NOT NULL
-        )
-        """;
+            CREATE TABLE IF NOT EXISTS items (
+                id SERIAL PRIMARY KEY,
+                descricao VARCHAR(255) NOT NULL,
+                nota DOUBLE PRECISION NOT NULL
+            )
+            """;
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.execute();
         }
     }
-
 
     @Override
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent event, Context context) {
@@ -46,7 +46,7 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
 
             context.getLogger().log("Item: " + request.getDescricao() + " | " + request.getNota());
 
-            salvarNoBanco(request);
+            salvarNoBanco(request, context);
 
             return APIGatewayV2HTTPResponse.builder()
                     .withStatusCode(201)
@@ -67,14 +67,11 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
         }
     }
 
-
-    private void salvarNoBanco(ItemRequest item) throws Exception {
+    private void salvarNoBanco(ItemRequest item, Context context) throws SQLException {
 
         String url = "jdbc:postgresql://" + System.getenv("DB_HOST") + ":5432/" + System.getenv("DB_NAME");
         String user = System.getenv("DB_USER");
         String pass = System.getenv("DB_PASS");
-
-        String sql = "INSERT INTO items (descricao, nota) VALUES (?, ?)";
 
         try (Connection conn = DriverManager.getConnection(url, user, pass)) {
             // 1️⃣ cria a tabela se não existir
@@ -87,6 +84,8 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
                 stmt.setDouble(2, item.getNota());
                 stmt.executeUpdate();
             }
+
+            context.getLogger().log("Item inserido com sucesso no banco.");
         }
 
     }
