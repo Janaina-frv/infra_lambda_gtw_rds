@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: apply  # apply | destroy
+      TF_ACTION: destroy  # apply | destroy
       AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
       LAMBDA_FUNCTION_NAME: items-api-lambda
@@ -128,29 +128,7 @@ jobs:
             echo "Policy VPC access NÃO está anexada, pulando import"
           fi
       
-
-      - name: Destroy policy attachments
-        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          terraform destroy \
-          -target=aws_iam_role_policy_attachment.lambda_basic_exec \
-          -target=aws_iam_role_policy_attachment.lambda_vpc_access \
-          -auto-approve
-    
-      - name: Apply IAM Role e policies
-        if: env.TF_ACTION == 'apply' && steps.get_iam_role.outputs.exists == 'false'
-        working-directory: infra
-        run: |
-          terraform apply \
-            -target=aws_iam_role.lambda_exec_role \
-            -target=aws_iam_role_policy_attachment.lambda_basic_exec \
-            -target=aws_iam_role_policy_attachment.lambda_vpc_access \
-            -auto-approve
-
-
-
-
+      #Verificar existencia de VPC e importar
 
       - name: Obter VPC ID pelo Name
         id: get_vpc
@@ -168,7 +146,6 @@ jobs:
             echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
             echo "exists=true" >> $GITHUB_OUTPUT
           fi
-
           
           echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
 
@@ -188,7 +165,6 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-
       - name: Importar VPC se existir
         if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
         working-directory: infra
@@ -196,18 +172,7 @@ jobs:
           echo "Importando VPC para o estado..."
           terraform import aws_vpc.${VPC_RESOURCE_NAME} ${VPC_ID}
 
-
-
-      - name: Executar apply da VPC
-        if: env.TF_ACTION == 'apply' && steps.vpc_check.outputs.exists == 'false'
-        working-directory: infra
-        run: |
-          echo "Criando VPC..."
-          terraform apply -target=aws_vpc.${VPC_RESOURCE_NAME} -auto-approve
-
-
-
-
+      #Verificar existencia de API Gateway e importar
 
       - name: Obter API Gateway ID pelo Name
         id: get_api
@@ -244,30 +209,7 @@ jobs:
           echo "Importando API Gateway para o estado..."
           terraform import aws_apigatewayv2_api.${API_RESOURCE_NAME} ${API_ID}
 
-      - name: Executar destroy da API Gateway
-        if: env.TF_ACTION == 'destroy' && steps.api_check.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          echo "Destruindo API Gateway..."
-          terraform destroy -target=aws_apigatewayv2_api.${API_RESOURCE_NAME} -auto-approve
-
-      - name: Executar apply da API Gateway
-        if: env.TF_ACTION == 'apply' && steps.api_check.outputs.exists == 'false'
-        working-directory: infra
-        run: |
-          echo "Criando API Gateway..."
-          terraform apply \
-            -target=aws_apigatewayv2_api.http_api \
-            -target=aws_apigatewayv2_integration.items_lambda \
-            -target=aws_apigatewayv2_route.health \
-            -target=aws_apigatewayv2_route.post_items \
-            -target=aws_apigatewayv2_stage.default \
-            -target=aws_lambda_permission.allow_api_gateway \
-            -auto-approve
-
-
-
-
+      #Verificar existencia de RDS e importar
 
       - name: Obter RDS Instance pelo identifier
         id: get_rds
@@ -290,11 +232,7 @@ jobs:
         run: |
           terraform import aws_db_instance.${RDS_DB_RESOURCE_NAME} ${DB_INSTANCE_ID}
 
-      - name: Destroy RDS Instance
-        if: env.TF_ACTION == 'destroy' && steps.get_rds.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          terraform destroy -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} -auto-approve
+      #Verificar existencia de DB Subnet Group e importar
 
       - name: Obter DB Subnet Group
         id: get_db_subnet_group
@@ -326,12 +264,7 @@ jobs:
           echo "Importando DB Subnet Group para o Terraform state..."
           terraform import aws_db_subnet_group.this_subnet_group $DB_SUBNET_GROUP_NAME || true
 
-      - name: Destroy DB Subnet Group
-        if: env.TF_ACTION == 'destroy' && steps.get_db_subnet_group.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          echo "Destruindo DB Subnet Group..."
-          terraform destroy -target=aws_db_subnet_group.this_subnet_group -auto-approve
+      #Verificar existencia de Security Group do RDS e importar
 
       - name: Obter Security Group do RDS
         id: get_rds_sg
@@ -357,23 +290,7 @@ jobs:
         run: |
           terraform import aws_security_group.${RDS_SG_RESOURCE_NAME} ${RDS_SG_ID}
 
-      - name: Destroy Security Group do RDS
-        if: env.TF_ACTION == 'destroy' && steps.get_rds_sg.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          terraform destroy -target=aws_security_group.${RDS_SG_RESOURCE_NAME} -auto-approve
-
-      - name: Apply RDS e Security Group
-        if: env.TF_ACTION == 'apply' && steps.get_rds.outputs.exists == 'false'
-        working-directory: infra
-        run: |
-          terraform apply \
-            -target=aws_security_group.${RDS_SG_RESOURCE_NAME} \
-            -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} \
-            -auto-approve
-
-
-
+      #Verificar existencia de Lambda e importar
 
       - name: Verificar existência de Lambda
         id: lambda_check
@@ -393,12 +310,33 @@ jobs:
           echo "Importando Lambda para o estado..."
           terraform import aws_lambda_function.${LAMBDA_RESOURCE_NAME} ${LAMBDA_FUNCTION_NAME}
 
-      - name: Executar destroy da Lambda
-        if: env.TF_ACTION == 'destroy' && steps.lambda_check.outputs.exists == 'true'
+      #Criação das infras na ordem correta
+
+      - name: Executar apply da VPC
+        if: env.TF_ACTION == 'apply' && steps.vpc_check.outputs.exists == 'false'
         working-directory: infra
         run: |
-          echo "Destruindo Lambda..."
-          terraform destroy -target=aws_lambda_function.${LAMBDA_RESOURCE_NAME} -auto-approve
+          echo "Criando VPC..."
+          terraform apply -target=aws_vpc.${VPC_RESOURCE_NAME} -auto-approve
+
+      - name: Apply RDS e Security Group
+        if: env.TF_ACTION == 'apply' && steps.get_rds.outputs.exists == 'false'
+        working-directory: infra
+        run: |
+          terraform apply \
+            -target=aws_security_group.${RDS_SG_RESOURCE_NAME} \
+            -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} \
+            -auto-approve
+
+      - name: Apply IAM Role e policies
+        if: env.TF_ACTION == 'apply' && steps.get_iam_role.outputs.exists == 'false'
+        working-directory: infra
+        run: |
+          terraform apply \
+            -target=aws_iam_role.lambda_exec_role \
+            -target=aws_iam_role_policy_attachment.lambda_basic_exec \
+            -target=aws_iam_role_policy_attachment.lambda_vpc_access \
+            -auto-approve
 
       - name: Instalar Java e compilar (modo apply)
         if: env.TF_ACTION == 'apply'
@@ -411,7 +349,6 @@ jobs:
         if: env.TF_ACTION == 'apply'
         working-directory: lambda
         run: mvn clean package
-
       - name: Copiar JAR gerado para a pasta de deploy
         if: env.TF_ACTION == 'apply'
         run: |
@@ -425,10 +362,44 @@ jobs:
           echo "Criando Lambda..."
           terraform apply -target=aws_lambda_function.${LAMBDA_RESOURCE_NAME} -auto-approve
 
+      - name: Executar apply da API Gateway
+        if: env.TF_ACTION == 'apply' && steps.api_check.outputs.exists == 'false'
+        working-directory: infra
+        run: |
+          echo "Criando API Gateway..."
+          terraform apply \
+            -target=aws_apigatewayv2_api.http_api \
+            -target=aws_apigatewayv2_integration.items_lambda \
+            -target=aws_apigatewayv2_route.health \
+            -target=aws_apigatewayv2_route.post_items \
+            -target=aws_apigatewayv2_stage.default \
+            -target=aws_lambda_permission.allow_api_gateway \
+            -auto-approve
 
+      #Destruição das infras na ordem correta
 
+      - name: Executar destroy da API Gateway
+        if: env.TF_ACTION == 'destroy' && steps.api_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Destruindo API Gateway..."
+          terraform destroy -target=aws_apigatewayv2_api.${API_RESOURCE_NAME} -auto-approve
+          
+      - name: Executar destroy da Lambda
+        if: env.TF_ACTION == 'destroy' && steps.lambda_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Destruindo Lambda..."
+          terraform destroy -target=aws_lambda_function.${LAMBDA_RESOURCE_NAME} -auto-approve
 
-
+      - name: Destroy policy attachments
+        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy \
+          -target=aws_iam_role_policy_attachment.lambda_basic_exec \
+          -target=aws_iam_role_policy_attachment.lambda_vpc_access \
+          -auto-approve
 
       - name: Destroy IAM Role
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
@@ -436,6 +407,25 @@ jobs:
         run: |
           echo "Destruindo IAM Role..."
           terraform destroy -target=aws_iam_role.lambda_exec_role -auto-approve
+
+      - name: Destroy RDS Instance
+        if: env.TF_ACTION == 'destroy' && steps.get_rds.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} -auto-approve
+
+      - name: Destroy DB Subnet Group
+        if: env.TF_ACTION == 'destroy' && steps.get_db_subnet_group.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Destruindo DB Subnet Group..."
+          terraform destroy -target=aws_db_subnet_group.this_subnet_group -auto-approve
+
+      - name: Destroy Security Group do RDS
+        if: env.TF_ACTION == 'destroy' && steps.get_rds_sg.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy -target=aws_security_group.${RDS_SG_RESOURCE_NAME} -auto-approve
 
       - name: Executar destroy da VPC
         if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
@@ -448,4 +438,3 @@ jobs:
           terraform destroy -target=aws_subnet.private_b -auto-approve
           echo "Destruindo a VPC..."
           terraform destroy -target=aws_vpc.this_vpc -auto-approve
-
