@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: apply  # apply | destroy
+      TF_ACTION: destroy  # apply | destroy
       AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
       LAMBDA_FUNCTION_NAME: items-api-lambda
@@ -394,14 +394,13 @@ jobs:
       - name: Compilar Lambda com Maven
         if: env.TF_ACTION == 'apply'
         working-directory: lambda
-        run: |
-          mvn clean package
+        run: mvn clean package
 
       - name: Copiar JAR gerado para a pasta de deploy
         if: env.TF_ACTION == 'apply'
         run: |
           mkdir -p infra/build/lambda
-          cp lambda/target/hello-lambda-1.0.jar infra/build/lambda/hello-lambda.jar
+          cp lambda/target/hello-lambda-1.0.jar infra/build/lambda/lambda.jar
 
       - name: Executar apply da Lambda
         if: env.TF_ACTION == 'apply' && steps.lambda_check.outputs.exists == 'false'
