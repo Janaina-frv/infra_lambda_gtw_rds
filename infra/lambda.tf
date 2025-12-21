@@ -31,7 +31,7 @@ resource "aws_lambda_function" "items" {
   runtime = var.lambda_runtime
   handler = var.lambda_handler
 
-  filename         = var.lambda_jar_file
+  filename      = "${path.module}/build/lambda/lambda.jar"
 
   memory_size = var.lambda_memory
   timeout     = var.lambda_timeout
