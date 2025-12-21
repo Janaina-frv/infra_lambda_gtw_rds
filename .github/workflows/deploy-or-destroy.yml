@@ -35,23 +35,18 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v3
 
-      - name: Configurar AWS via OIDC
+      - name: Autenticar com AWS via OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::757367947438:role/GitHubOIDCRole
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Build da Lambda (Java)
-        working-directory: lambda
-        run: |
-          echo "🛠️ Build da Lambda..."
-          ./gradlew clean build   # ou mvn package se usar Maven
-          cp build/libs/*.jar ../infra/${{ env.LAMBDA_JAR_NAME }}
+      - name: Verificar modo de operação
+        run: echo "🚀 Iniciando workflow em modo $TF_ACTION"
 
-      - name: Verificar arquivo Lambda
-        run: |
-          ls -l infra/${{ env.LAMBDA_JAR_NAME }}
-
+      # =========================
+      # Terraform Setup
+      # =========================
       - name: Instalar Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -65,12 +60,24 @@ jobs:
         working-directory: infra
         run: terraform validate
 
+      # =========================
+      # Terraform Apply
+      # =========================
       - name: Terraform Apply
         if: env.TF_ACTION == 'apply'
         working-directory: infra
-        run: terraform apply -auto-approve -var="db_password=${{ secrets.DB_PASSWORD }}"
+        run: |
+          echo "🚀 Aplicando toda a infraestrutura..."
+          terraform apply -auto-approve -var="db_password=${{ secrets.DB_PASSWORD }}" \
+                          -var="lambda_jar_file=${{ env.LAMBDA_JAR_NAME }}"
 
+      # =========================
+      # Terraform Destroy
+      # =========================
       - name: Terraform Destroy
         if: env.TF_ACTION == 'destroy'
         working-directory: infra
-        run: terraform destroy -auto-approve -var="db_password=${{ secrets.DB_PASSWORD }}"
+        run: |
+          echo "🧨 Destruindo toda a infraestrutura..."
+          terraform destroy -auto-approve -var="db_password=${{ secrets.DB_PASSWORD }}" \
+                             -var="lambda_jar_file=${{ env.LAMBDA_JAR_NAME }}"
