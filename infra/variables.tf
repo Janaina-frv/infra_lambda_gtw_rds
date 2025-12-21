@@ -17,13 +17,13 @@ variable "db_name" {
 
 variable "db_username" {
   type        = string
-  default     = "dbadmin1234"
+  default     = "dbadmin"
   description = "Usuário do banco"
 }
 
 variable "db_password" {
   type        = string
-  default     = "dbadmin"
+  default     = "dbadmin1234"
   description = "Senha do banco"
   sensitive   = true
 }
