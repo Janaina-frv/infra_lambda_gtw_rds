@@ -427,7 +427,7 @@ jobs:
     
 
       - name: DESTROY - VPC
-        if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
+        if: env.TF_ACTION == 'destroy' && steps.get_vpc.outputs.exists == 'true'
         working-directory: infra
         run: |
           echo "Destruindo VPC..."
