@@ -15,7 +15,7 @@ output "lambda_function_name" {
 
 output "rds_endpoint" {
   description = "Endpoint do RDS"
-  value       = aws_db_instance.postgres.address
+  value       = aws_db_instance.items_db.address
 }
 
 output "api_endpoint" {
