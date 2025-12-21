@@ -136,18 +136,25 @@ jobs:
         working-directory: infra
         run: |
           echo "Criando recursos somente se não existirem..."
-          if [ "${{ steps.vpc_check.outputs.vpc_exists }}" != "true" ]; then
+
+          VPC_EXISTS="${{ steps.vpc_check.outputs.vpc_exists }}"
+          RDS_EXISTS="${{ steps.rds_check.outputs.rds_exists }}"
+          LAMBDA_EXISTS="${{ steps.lambda_check.outputs.lambda_exists }}"
+          API_EXISTS="${{ steps.api_check.outputs.api_exists }}"
+
+          if [ "$VPC_EXISTS" != "true" ]; then
             terraform apply -auto-approve -target=aws_vpc.items_vpc -var="db_password=${{ secrets.DB_PASSWORD }}"
           fi
-          if [ "${{ steps.rds_check.outputs.rds_exists }}" != "true" ]; then
+          if [ "$RDS_EXISTS" != "true" ]; then
             terraform apply -auto-approve -target=aws_db_instance.items_db -var="db_password=${{ secrets.DB_PASSWORD }}"
           fi
-          if [ "${{ steps.lambda_check.outputs.lambda_exists }}" != "true" ]; then
+          if [ "$LAMBDA_EXISTS" != "true" ]; then
             terraform apply -auto-approve -target=aws_lambda_function.items_lambda -var="db_password=${{ secrets.DB_PASSWORD }}"
           fi
-          if [ "${{ steps.api_check.outputs.api_exists }}" != "true" ]; then
+          if [ "$API_EXISTS" != "true" ]; then
             terraform apply -auto-approve -target=aws_api_gateway_rest_api.items_api -var="db_password=${{ secrets.DB_PASSWORD }}"
           fi
+      
 
       # =========================
       # Terraform Destroy
@@ -157,15 +164,22 @@ jobs:
         working-directory: infra
         run: |
           echo "Destruindo recursos somente se existirem..."
-          if [ "${{ steps.api_check.outputs.api_exists }}" == "true" ]; then
+
+          API_EXISTS="${{ steps.api_check.outputs.api_exists }}"
+          LAMBDA_EXISTS="${{ steps.lambda_check.outputs.lambda_exists }}"
+          RDS_EXISTS="${{ steps.rds_check.outputs.rds_exists }}"
+          VPC_EXISTS="${{ steps.vpc_check.outputs.vpc_exists }}"
+
+          if [ "$API_EXISTS" == "true" ]; then
             terraform destroy -auto-approve -target=aws_api_gateway_rest_api.items_api -var="db_password=${{ secrets.DB_PASSWORD }}"
           fi
-          if [ "${{ steps.lambda_check.outputs.lambda_exists }}" == "true" ]; then
+          if [ "$LAMBDA_EXISTS" == "true" ]; then
             terraform destroy -auto-approve -target=aws_lambda_function.items_lambda -var="db_password=${{ secrets.DB_PASSWORD }}"
           fi
-          if [ "${{ steps.rds_check.outputs.rds_exists }}" == "true" ]; then
+          if [ "$RDS_EXISTS" == "true" ]; then
             terraform destroy -auto-approve -target=aws_db_instance.items_db -var="db_password=${{ secrets.DB_PASSWORD }}"
           fi
-          if [ "${{ steps.vpc_check.outputs.vpc_exists }}" == "true" ]; then
+          if [ "$VPC_EXISTS" == "true" ]; then
             terraform destroy -auto-approve -target=aws_vpc.items_vpc -var="db_password=${{ secrets.DB_PASSWORD }}"
           fi
+      
