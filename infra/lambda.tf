@@ -1,38 +1,4 @@
 #####################################
-# Variáveis da Lambda
-#####################################
-
-variable "lambda_function_name" {
-  description = "Nome da função Lambda"
-  default     = "items-api-lambda"
-}
-
-variable "lambda_runtime" {
-  description = "Runtime da Lambda"
-  default     = "java17"
-}
-
-variable "lambda_handler" {
-  description = "Handler da Lambda"
-  default     = "com.example.Handler::handleRequest"
-}
-
-variable "lambda_memory" {
-  description = "Memória da Lambda em MB"
-  default     = 512
-}
-
-variable "lambda_timeout" {
-  description = "Timeout da Lambda em segundos"
-  default     = 10
-}
-
-variable "lambda_jar_file" {
-  description = "Arquivo .jar da Lambda"
-  default     = "lambda.jar"
-}
-
-#####################################
 # Security Group da Lambda
 #####################################
 

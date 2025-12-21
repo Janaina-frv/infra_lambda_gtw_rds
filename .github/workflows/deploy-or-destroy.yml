@@ -14,22 +14,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      AWS_REGION: us-east-1
-      AWS_ACCOUNT_ID: 757367947438
       TF_ACTION: apply  # apply | destroy
-
-      # Lambda
-      FUNCTION_NAME: items-api-lambda
-      LAMBDA_JAR_NAME: lambda.jar
-
-      # RDS
-      DB_INSTANCE_IDENTIFIER: items-db
-
-      # API Gateway
-      API_NAME: items-api
-
-      # VPC
-      VPC_NAME: items-vpc
+      AWS_REGION: us-east-1
 
     steps:
       - name: Checkout código
@@ -41,12 +27,6 @@ jobs:
           role-to-assume: arn:aws:iam::757367947438:role/GitHubOIDCRole
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Verificar modo de operação
-        run: echo "🚀 Iniciando workflow em modo $TF_ACTION"
-
-      # =========================
-      # Terraform Setup
-      # =========================
       - name: Instalar Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -60,24 +40,16 @@ jobs:
         working-directory: infra
         run: terraform validate
 
-      # =========================
-      # Terraform Apply
-      # =========================
       - name: Terraform Apply
         if: env.TF_ACTION == 'apply'
         working-directory: infra
         run: |
           echo "🚀 Aplicando toda a infraestrutura..."
-          terraform apply -auto-approve -var="db_password=${{ secrets.DB_PASSWORD }}" \
-                          -var="lambda_jar_file=${{ env.LAMBDA_JAR_NAME }}"
+          terraform apply -auto-approve -var="db_password=${{ secrets.DB_PASSWORD }}"
 
-      # =========================
-      # Terraform Destroy
-      # =========================
       - name: Terraform Destroy
         if: env.TF_ACTION == 'destroy'
         working-directory: infra
         run: |
           echo "🧨 Destruindo toda a infraestrutura..."
-          terraform destroy -auto-approve -var="db_password=${{ secrets.DB_PASSWORD }}" \
-                             -var="lambda_jar_file=${{ env.LAMBDA_JAR_NAME }}"
+          terraform destroy -auto-approve -var="db_password=${{ secrets.DB_PASSWORD }}"
