@@ -21,6 +21,7 @@ jobs:
       LAMBDA_PATH_JAVA: lambda/src/main/java/com/example/Handler.java
       LAMBDA_PATH_CLASS: com/example/Handler.class
       VPC_RESOURCE_NAME: this_vpc
+      $API_NAME: items-api
       API_RESOURCE_NAME: http_api
       IAM_ROLE_RESOURCE_NAME: lambda_exec_role
       RDS_SG_RESOURCE_NAME: rds_sg
@@ -187,8 +188,8 @@ jobs:
       - name: Obter API Gateway ID pelo Name
         id: get_api
         run: |
-          API_ID=$(aws apigateway get-rest-apis \
-            --query "items[?name=='app-api'].id | [0]" \
+          API_ID=$(aws apigatewayv2 get-apis --region $AWS_REGION \
+            --query "Items[?Name=='$API_NAME'].ApiId | [0]" \
             --output text)
           
           if [ "$API_ID" = "None" ] || [ -z "$API_ID" ]; then
@@ -293,6 +294,19 @@ jobs:
         working-directory: infra
         run: |
           terraform destroy -target=aws_security_group.${RDS_SG_RESOURCE_NAME} -auto-approve
+
+      - name: Destroy DB Subnet Group
+        if: env.TF_ACTION == 'destroy' && steps.get_db_subnet_group.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy -target=aws_db_subnet_group.this_subnet_group -auto-approve
+
+      - name: Destroy Option Group
+        if: env.TF_ACTION == 'destroy' && steps.get_db_option_group.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy -target=aws_db_option_group.this_option_group -auto-approve
+
 
       - name: Apply RDS e Security Group
         if: env.TF_ACTION == 'apply' && steps.get_rds.outputs.exists == 'false'
