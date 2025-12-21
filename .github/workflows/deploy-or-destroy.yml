@@ -1,3 +1,7 @@
+## VPC anda não esta destruindo e dois groups no RDS nao apagam sozinhos, pq sao criados deafult
+
+
+
 name: Deploy or Destroy AWS Infra (VPC + RDS + Lambda + API Gateway)
 
 on:
@@ -147,23 +151,29 @@ jobs:
             --query "Vpcs[0].VpcId" \
             --output text)
           
-          if [ "$VPC_ID" = "None" ]; then
+          if [ -z "$VPC_ID" ] || [ "$VPC_ID" = "None" ]; then
             echo "VPC não encontrada"
-            exit 1
+            echo "exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "VPC encontrada: $VPC_ID"
+            echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
+            echo "exists=true" >> $GITHUB_OUTPUT
           fi
+
           
           echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
 
+      # 2️⃣ Verificar existência da VPC
       - name: Verificar existência da VPC
         id: vpc_check
         run: |
-          if aws ec2 describe-vpcs --vpc-ids $VPC_ID >/dev/null 2>&1; then
+          if [ "${{ steps.get_vpc.outputs.exists }}" == "true" ] && \
+             aws ec2 describe-vpcs --vpc-ids $VPC_ID >/dev/null 2>&1; then
             echo "✅ VPC encontrada: $VPC_ID"
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "⚠️ VPC não encontrada."
             echo "exists=false" >> $GITHUB_OUTPUT
-          fi
 
       - name: Importar VPC se existir
         if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
