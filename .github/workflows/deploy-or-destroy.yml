@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: destroy  # apply | destroy
+      TF_ACTION: apply  # apply | destroy
       AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
       LAMBDA_FUNCTION_NAME: items-api-lambda
@@ -77,6 +77,15 @@ jobs:
             echo "⚠️ IAM Role não encontrada"
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Importar IAM Role se existir
+        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Importando IAM Role para o Terraform state..."
+          terraform import aws_iam_role.lambda_exec_role $IAM_ROLE_NAME
+
+
 
       - name: Importar policy attachment basic exec (se existir)
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
@@ -418,6 +427,7 @@ jobs:
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
+          echo "Destruindo IAM Role..."
           terraform destroy -target=aws_iam_role.lambda_exec_role -auto-approve
 
       - name: Executar destroy da VPC
