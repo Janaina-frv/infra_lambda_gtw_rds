@@ -229,7 +229,7 @@ jobs:
       - name: Verificar existência da API Gateway
         id: api_check
         run: |
-          if aws apigateway get-rest-api --rest-api-id $API_ID >/dev/null 2>&1; then
+          if aws apigatewayv2 get-api --rest-api-id $API_ID >/dev/null 2>&1; then
             echo "✅ API Gateway encontrada: $API_ID"
             echo "exists=true" >> $GITHUB_OUTPUT
           else
@@ -242,21 +242,21 @@ jobs:
         working-directory: infra
         run: |
           echo "Importando API Gateway para o estado..."
-          terraform import aws_api_gateway_rest_api.${API_RESOURCE_NAME} ${API_ID}
+          terraform import aws_apigatewayv2_api.${API_RESOURCE_NAME} ${API_ID}
 
       - name: Executar destroy da API Gateway
         if: env.TF_ACTION == 'destroy' && steps.api_check.outputs.exists == 'true'
         working-directory: infra
         run: |
           echo "Destruindo API Gateway..."
-          terraform destroy -target=aws_api_gateway_rest_api.${API_RESOURCE_NAME} -auto-approve
+          terraform destroy -target=aws_apigatewayv2_api.${API_RESOURCE_NAME} -auto-approve
 
       - name: Executar apply da API Gateway
         if: env.TF_ACTION == 'apply' && steps.api_check.outputs.exists == 'false'
         working-directory: infra
         run: |
           echo "Criando API Gateway..."
-          terraform apply -target=aws_api_gateway_rest_api.${API_RESOURCE_NAME} -auto-approve
+          terraform apply -target=aws_apigatewayv2_api.${API_RESOURCE_NAME} -auto-approve
 
 
 
