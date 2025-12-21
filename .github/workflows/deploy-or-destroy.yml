@@ -318,6 +318,7 @@ jobs:
           else
             echo "DB Subnet Group NÃO encontrado"
             echo "exists=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Importar DB Subnet Group se existir
         if: steps.get_db_subnet_group.outputs.exists == 'true'
