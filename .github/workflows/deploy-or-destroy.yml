@@ -256,7 +256,14 @@ jobs:
         working-directory: infra
         run: |
           echo "Criando API Gateway..."
-          terraform apply -target=aws_apigatewayv2_api.${API_RESOURCE_NAME} -auto-approve
+          terraform apply \
+            -target=aws_apigatewayv2_api.http_api \
+            -target=aws_apigatewayv2_integration.items_lambda \
+            -target=aws_apigatewayv2_route.health \
+            -target=aws_apigatewayv2_route.post_items \
+            -target=aws_apigatewayv2_stage.default \
+            -target=aws_lambda_permission.allow_api_gateway \
+            -auto-approve
 
 
 
