@@ -64,7 +64,7 @@ jobs:
 
 
 
-      - name: Obter IAM Role pelo Name
+      - name: Verificar e Obter IAM Role pelo Name
         id: get_iam_role
         run: |
           ROLE_NAME="lambda-java-exec-role"
@@ -130,7 +130,7 @@ jobs:
       
       #Verificar existencia de VPC e importar
 
-      - name: Obter VPC ID pelo Name
+      - name: Verificar e Obter VPC pelo Name
         id: get_vpc
         run: |
           VPC_ID=$(aws ec2 describe-vpcs \
@@ -142,28 +142,15 @@ jobs:
             echo "VPC não encontrada"
             echo "exists=false" >> $GITHUB_OUTPUT
           else
-            echo "VPC encontrada: $VPC_ID"
-            echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
-            echo "exists=true" >> $GITHUB_OUTPUT
-          fi
-          
-          echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
-
-      - name: Verificar existência da VPC
-        id: vpc_check
-        run: |
-          if [ "${{ steps.get_vpc.outputs.exists }}" == "true" ]; then
+            # Verifica se a VPC realmente existe
             if aws ec2 describe-vpcs --vpc-ids $VPC_ID >/dev/null 2>&1; then
               echo "✅ VPC encontrada: $VPC_ID"
               echo "exists=true" >> $GITHUB_OUTPUT
+              echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
             else
-              echo "⚠️ VPC não encontrada."
+              echo "⚠️ VPC não encontrada (ID obtido, mas não existe mais)"
               echo "exists=false" >> $GITHUB_OUTPUT
             fi
-          else
-            echo "⚠️ VPC não encontrada (step anterior marcou exists=false)."
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
 
       - name: Importar VPC se existir
         if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
@@ -174,32 +161,26 @@ jobs:
 
       #Verificar existencia de API Gateway e importar
 
-      - name: Obter API Gateway ID pelo Name
+      - name: Verificar e Obter API Gateway pelo Name
         id: get_api
         run: |
           API_ID=$(aws apigatewayv2 get-apis --region $AWS_REGION \
             --query "Items[?Name=='$API_NAME'].ApiId | [0]" \
             --output text)
           
-          if [ "$API_ID" = "None" ] || [ -z "$API_ID" ]; then
+          if [ -z "$API_ID" ] || [ "$API_ID" = "None" ]; then
             echo "API Gateway não encontrada"
             echo "exists=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          echo "API Gateway encontrada: $API_ID"
-          echo "API_ID=$API_ID" >> $GITHUB_ENV
-          echo "exists=true" >> $GITHUB_OUTPUT
-
-      - name: Verificar existência da API Gateway
-        id: api_check
-        run: |
-          if aws apigatewayv2 get-api --api-id $API_ID >/dev/null 2>&1; then
-            echo "✅ API Gateway encontrada: $API_ID"
-            echo "exists=true" >> $GITHUB_OUTPUT
           else
-            echo "⚠️ API Gateway não encontrada."
-            echo "exists=false" >> $GITHUB_OUTPUT
+            # Verifica se a API realmente existe
+            if aws apigatewayv2 get-api --api-id $API_ID >/dev/null 2>&1; then
+              echo "✅ API Gateway encontrada: $API_ID"
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "API_ID=$API_ID" >> $GITHUB_ENV
+            else
+              echo "⚠️ API Gateway não encontrada (ID obtido, mas não existe mais)"
+              echo "exists=false" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Importar API Gateway se existir
@@ -211,7 +192,7 @@ jobs:
 
       #Verificar existencia de RDS e importar
 
-      - name: Obter RDS Instance pelo identifier
+      - name: Verificar e Obter RDS Instance pelo identifier
         id: get_rds
         run: |
           DB_ID="${DB_INSTANCE_IDENTIFIER}"
@@ -234,7 +215,7 @@ jobs:
 
       #Verificar existencia de DB Subnet Group e importar
 
-      - name: Obter DB Subnet Group
+      - name: Verificar e Obter DB Subnet Group
         id: get_db_subnet_group
         run: |
           set -x
@@ -266,7 +247,7 @@ jobs:
 
       #Verificar existencia de Security Group do RDS e importar
 
-      - name: Obter Security Group do RDS
+      - name: Verificar e Obter Security Group do RDS
         id: get_rds_sg
         run: |
           SG_ID=$(aws ec2 describe-security-groups \
@@ -312,14 +293,14 @@ jobs:
 
       #Criação das infras na ordem correta
 
-      - name: Executar apply da VPC
+      - name: APPLY - Executar da VPC
         if: env.TF_ACTION == 'apply' && steps.vpc_check.outputs.exists == 'false'
         working-directory: infra
         run: |
           echo "Criando VPC..."
           terraform apply -target=aws_vpc.${VPC_RESOURCE_NAME} -auto-approve
 
-      - name: Apply RDS e Security Group
+      - name: APPLY - RDS e Security Group
         if: env.TF_ACTION == 'apply' && steps.get_rds.outputs.exists == 'false'
         working-directory: infra
         run: |
@@ -328,7 +309,7 @@ jobs:
             -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} \
             -auto-approve
 
-      - name: Apply IAM Role e policies
+      - name: APPLY - IAM Role e policies
         if: env.TF_ACTION == 'apply' && steps.get_iam_role.outputs.exists == 'false'
         working-directory: infra
         run: |
@@ -355,14 +336,14 @@ jobs:
           mkdir -p infra/build/lambda
           cp lambda/target/hello-lambda-1.0.jar infra/build/lambda/lambda.jar
 
-      - name: Executar apply da Lambda
+      - name: APPLY - Executar da Lambda
         if: env.TF_ACTION == 'apply' && steps.lambda_check.outputs.exists == 'false'
         working-directory: infra
         run: |
           echo "Criando Lambda..."
           terraform apply -target=aws_lambda_function.${LAMBDA_RESOURCE_NAME} -auto-approve
 
-      - name: Executar apply da API Gateway
+      - name: APPLY - Executar da API Gateway
         if: env.TF_ACTION == 'apply' && steps.api_check.outputs.exists == 'false'
         working-directory: infra
         run: |
@@ -378,63 +359,77 @@ jobs:
 
       #Destruição das infras na ordem correta
 
-      - name: Executar destroy da API Gateway
+      - name: DESTROY - API Gateway
         if: env.TF_ACTION == 'destroy' && steps.api_check.outputs.exists == 'true'
         working-directory: infra
         run: |
           echo "Destruindo API Gateway..."
           terraform destroy -target=aws_apigatewayv2_api.${API_RESOURCE_NAME} -auto-approve
-          
-      - name: Executar destroy da Lambda
+    
+
+      - name: DESTROY - Lambda
         if: env.TF_ACTION == 'destroy' && steps.lambda_check.outputs.exists == 'true'
         working-directory: infra
         run: |
           echo "Destruindo Lambda..."
           terraform destroy -target=aws_lambda_function.${LAMBDA_RESOURCE_NAME} -auto-approve
+    
 
-      - name: Destroy policy attachments
+      - name: DESTROY - IAM policy attachments
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
           terraform destroy \
-          -target=aws_iam_role_policy_attachment.lambda_basic_exec \
-          -target=aws_iam_role_policy_attachment.lambda_vpc_access \
-          -auto-approve
+            -target=aws_iam_role_policy_attachment.lambda_basic_exec \
+            -target=aws_iam_role_policy_attachment.lambda_vpc_access \
+            -auto-approve
+    
 
-      - name: Destroy IAM Role
+      - name: DESTROY - IAM Role
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
           echo "Destruindo IAM Role..."
           terraform destroy -target=aws_iam_role.lambda_exec_role -auto-approve
+    
 
-      - name: Destroy RDS Instance
+      - name: DESTROY - RDS Instance
         if: env.TF_ACTION == 'destroy' && steps.get_rds.outputs.exists == 'true'
         working-directory: infra
         run: |
+          echo "Destruindo RDS Instance..."
           terraform destroy -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} -auto-approve
+    
 
-      - name: Destroy DB Subnet Group
+      - name: DESTROY - DB Subnet Group
         if: env.TF_ACTION == 'destroy' && steps.get_db_subnet_group.outputs.exists == 'true'
         working-directory: infra
         run: |
           echo "Destruindo DB Subnet Group..."
           terraform destroy -target=aws_db_subnet_group.this_subnet_group -auto-approve
+    
 
-      - name: Destroy Security Group do RDS
-        if: env.TF_ACTION == 'destroy' && steps.get_rds_sg.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          terraform destroy -target=aws_security_group.${RDS_SG_RESOURCE_NAME} -auto-approve
-
-      - name: Executar destroy da VPC
+      - name: DESTROY - Security Groups da VPC
         if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
         working-directory: infra
         run: |
-          echo "Destruindo recursos dependentes da VPC..."
+          echo "Destruindo Security Groups..."
           terraform destroy -target=aws_security_group.lambda_sg -auto-approve
-          terraform destroy -target=aws_security_group.rds_sg -auto-approve
+          terraform destroy -target=aws_security_group.${RDS_SG_RESOURCE_NAME} -auto-approve
+    
+
+      - name: DESTROY - Subnets da VPC
+        if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Destruindo Subnets..."
           terraform destroy -target=aws_subnet.private_a -auto-approve
           terraform destroy -target=aws_subnet.private_b -auto-approve
-          echo "Destruindo a VPC..."
+    
+
+      - name: DESTROY - VPC
+        if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Destruindo VPC..."
           terraform destroy -target=aws_vpc.this_vpc -auto-approve
