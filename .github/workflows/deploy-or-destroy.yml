@@ -238,30 +238,6 @@ jobs:
 
 
 
-      - name: Obter Security Group do RDS
-        id: get_rds_sg
-        run: |
-          SG_ID=$(aws ec2 describe-security-groups \
-            --filters "Name=group-name,Values=rds-sg" \
-            --query "SecurityGroups[0].GroupId" \
-            --output text)
-          
-          if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
-            echo "Security Group do RDS não encontrado"
-            echo "exists=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          echo "Security Group encontrado: $SG_ID"
-          echo "exists=true" >> $GITHUB_OUTPUT
-          echo "RDS_SG_ID=$SG_ID" >> $GITHUB_ENV
-
-      - name: Importar Security Group do RDS
-        if: env.TF_ACTION == 'destroy' && steps.get_rds_sg.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          terraform import aws_security_group.${RDS_SG_RESOURCE_NAME} ${RDS_SG_ID}
-
       - name: Obter RDS Instance pelo identifier
         id: get_rds
         run: |
@@ -289,37 +265,6 @@ jobs:
         run: |
           terraform destroy -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} -auto-approve
 
-      - name: Destroy Security Group do RDS
-        if: env.TF_ACTION == 'destroy' && steps.get_rds_sg.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          terraform destroy -target=aws_security_group.${RDS_SG_RESOURCE_NAME} -auto-approve
-
-      - name: Obter DB Subnet Group
-        id: get_db_subnet_group
-        run: |
-          SUBNET_GROUP_NAME="app-db-subnet-group"
-          
-          EXISTS=$(aws rds describe-db-subnet-groups \
-            --db-subnet-group-name $SUBNET_GROUP_NAME \
-            --query "DBSubnetGroups[0].DBSubnetGroupName" \
-            --output text 2>/dev/null || echo "")
-          
-          if [ -n "$EXISTS" ] && [ "$EXISTS" != "None" ]; then
-            echo "DB Subnet Group encontrado: $SUBNET_GROUP_NAME"
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "DB_SUBNET_GROUP_NAME=$SUBNET_GROUP_NAME" >> $GITHUB_ENV
-          else
-            echo "DB Subnet Group NÃO encontrado"
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Destroy DB Subnet Group
-        if: env.TF_ACTION == 'destroy' && steps.get_db_subnet_group.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          terraform destroy -target=aws_db_subnet_group.this_subnet_group -auto-approve
-
       - name: Obter Option Group
         id: get_db_option_group
         run: |
@@ -345,6 +290,64 @@ jobs:
         run: |
           terraform destroy -target=aws_db_option_group.this_option_group -auto-approve
 
+      - name: Obter DB Subnet Group
+        id: get_db_subnet_group
+        run: |
+          set -x  # loga cada comando no pipeline
+          SUBNET_GROUP_NAME="app-db-subnet-group"
+          echo "Verificando Subnet Group: $SUBNET_GROUP_NAME"
+          
+          EXISTS=$(aws rds describe-db-subnet-groups \
+            --db-subnet-group-name $SUBNET_GROUP_NAME \
+            --query "DBSubnetGroups[0].DBSubnetGroupName" \
+            --output text || echo "")
+          
+          echo "Valor retornado pelo AWS CLI: '$EXISTS'"
+          
+          if [ -n "$EXISTS" ] && [ "$EXISTS" != "None" ]; then
+            echo "DB Subnet Group encontrado: $SUBNET_GROUP_NAME"
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "DB_SUBNET_GROUP_NAME=$SUBNET_GROUP_NAME" >> $GITHUB_ENV
+          else
+            echo "DB Subnet Group NÃO encontrado"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Destroy DB Subnet Group
+        if: env.TF_ACTION == 'destroy' && steps.get_db_subnet_group.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy -target=aws_db_subnet_group.this_subnet_group -auto-approve
+
+      - name: Obter Security Group do RDS
+        id: get_rds_sg
+        run: |
+          SG_ID=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=rds-sg" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text)
+          
+          if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
+            echo "Security Group do RDS não encontrado"
+            echo "exists=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "Security Group encontrado: $SG_ID"
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "RDS_SG_ID=$SG_ID" >> $GITHUB_ENV
+
+      - name: Importar Security Group do RDS
+        if: env.TF_ACTION == 'destroy' && steps.get_rds_sg.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform import aws_security_group.${RDS_SG_RESOURCE_NAME} ${RDS_SG_ID}
+
+      - name: Destroy Security Group do RDS
+        if: env.TF_ACTION == 'destroy' && steps.get_rds_sg.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy -target=aws_security_group.${RDS_SG_RESOURCE_NAME} -auto-approve
 
       - name: Apply RDS e Security Group
         if: env.TF_ACTION == 'apply' && steps.get_rds.outputs.exists == 'false'
@@ -354,16 +357,6 @@ jobs:
             -target=aws_security_group.${RDS_SG_RESOURCE_NAME} \
             -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} \
             -auto-approve
-
-
-
-
-
-
-
-
-
-
 
 
 
