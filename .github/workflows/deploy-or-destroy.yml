@@ -18,14 +18,14 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: destroy  # apply | destroy
+      TF_ACTION: apply  # apply | destroy
       AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
       LAMBDA_FUNCTION_NAME: items-api-lambda
       LAMBDA_PATH_JAVA: lambda/src/main/java/com/example/Handler.java
       LAMBDA_PATH_CLASS: com/example/Handler.class
       VPC_RESOURCE_NAME: this_vpc
-      API_NAME: items-api
+      API_NAME: items-http-api
       API_RESOURCE_NAME: http_api
       IAM_ROLE_RESOURCE_NAME: lambda_exec_role
       RDS_SG_RESOURCE_NAME: rds_sg
