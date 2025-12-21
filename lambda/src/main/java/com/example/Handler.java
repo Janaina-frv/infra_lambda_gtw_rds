@@ -15,6 +15,20 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
+    private void criarTabelaSeNaoExistir(Connection conn) throws SQLException {
+        String sql = """
+        CREATE TABLE IF NOT EXISTS items (
+            id SERIAL PRIMARY KEY,
+            descricao VARCHAR(255) NOT NULL,
+            nota DOUBLE PRECISION NOT NULL
+        )
+        """;
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.execute();
+        }
+    }
+
+
     @Override
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent event, Context context) {
 
@@ -62,12 +76,18 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
 
         String sql = "INSERT INTO items (descricao, nota) VALUES (?, ?)";
 
-        try (Connection conn = DriverManager.getConnection(url, user, pass);
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DriverManager.getConnection(url, user, pass)) {
+            // 1️⃣ cria a tabela se não existir
+            criarTabelaSeNaoExistir(conn);
 
-            stmt.setString(1, item.getDescricao());
-            stmt.setDouble(2, item.getNota());
-            stmt.executeUpdate();
+            // 2️⃣ insere o item
+            String sqlInsert = "INSERT INTO items (descricao, nota) VALUES (?, ?)";
+            try (PreparedStatement stmt = conn.prepareStatement(sqlInsert)) {
+                stmt.setString(1, item.getDescricao());
+                stmt.setDouble(2, item.getNota());
+                stmt.executeUpdate();
+            }
         }
+
     }
 }
