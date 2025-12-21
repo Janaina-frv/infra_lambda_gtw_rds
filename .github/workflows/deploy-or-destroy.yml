@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: destroy  # apply | destroy
+      TF_ACTION: apply  # apply | destroy
       AWS_REGION: us-east-1
 
     steps:
@@ -39,6 +39,15 @@ jobs:
       - name: Terraform Validate
         working-directory: infra
         run: terraform validate
+
+      - name: Limpar cache / state antigo (opcional)
+        if: env.TF_ACTION == 'apply'
+        working-directory: infra
+        run: |
+          echo "🧹 Limpando state antigo do RDS e Lambda..."
+          terraform state rm -ignore-remote-lock aws_db_instance.items_db || true
+          terraform state rm -ignore-remote-lock aws_db_subnet_group.this || true
+          terraform state rm -ignore-remote-lock aws_lambda_function.items || true
 
       - name: Terraform Apply
         if: env.TF_ACTION == 'apply'
