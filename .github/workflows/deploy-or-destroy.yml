@@ -17,19 +17,7 @@ jobs:
       AWS_REGION: us-east-1
       AWS_ACCOUNT_ID: 757367947438
       TF_ACTION: apply  # apply | destroy
-
-      # Lambda
-      FUNCTION_NAME: items-api-lambda
-      LAMBDA_JAR_NAME: lambda.jar
-
-      # RDS
-      DB_INSTANCE_IDENTIFIER: items-db
-
-      # API Gateway
-      API_NAME: items-api
-
-      # VPC
-      VPC_NAME: items-vpc
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
     steps:
       - name: Checkout código
@@ -41,80 +29,6 @@ jobs:
           role-to-assume: arn:aws:iam::757367947438:role/GitHubOIDCRole
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Verificar modo de operação
-        run: echo "🚀 Iniciando workflow em modo $TF_ACTION"
-
-      # =========================
-      # Verificação de VPC
-      # =========================
-      - name: Verificar existência da VPC
-        id: vpc_check
-        run: |
-          VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=${VPC_NAME}" --query 'Vpcs[0].VpcId' --output text 2>/dev/null)
-          if [ "$VPC_ID" != "None" ]; then
-            echo "vpc_exists=true" >> $GITHUB_OUTPUT
-            echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
-            echo "✅ VPC encontrada: $VPC_ID"
-          else
-            echo "vpc_exists=false" >> $GITHUB_OUTPUT
-            echo "⚠️ VPC não encontrada."
-          fi
-
-      # =========================
-      # Verificação de RDS
-      # =========================
-      - name: Verificar existência do RDS
-        id: rds_check
-        run: |
-          set +e
-          RDS_EXISTS=$(aws rds describe-db-instances \
-            --db-instance-identifier $DB_INSTANCE_IDENTIFIER \
-            --query 'DBInstances[0].DBInstanceIdentifier' \
-            --output text 2>/dev/null)
-          STATUS=$?
-          set -e
-
-          if [ $STATUS -eq 0 ] && [ "$RDS_EXISTS" != "None" ]; then
-            echo "rds_exists=true" >> $GITHUB_OUTPUT
-            echo "✅ RDS encontrado: $RDS_EXISTS"
-          else
-            echo "rds_exists=false" >> $GITHUB_OUTPUT
-            echo "⚠️ RDS não encontrado."
-          fi
-
-      # =========================
-      # Verificação de Lambda
-      # =========================
-      - name: Verificar existência da Lambda
-        id: lambda_check
-        run: |
-          if aws lambda get-function --function-name $FUNCTION_NAME &>/dev/null; then
-            echo "lambda_exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Lambda encontrada: $FUNCTION_NAME"
-          else
-            echo "lambda_exists=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Lambda não encontrada."
-          fi
-
-      # =========================
-      # Verificação de API Gateway
-      # =========================
-      - name: Verificar existência da API Gateway
-        id: api_check
-        run: |
-          API_ID=$(aws apigateway get-rest-apis --query "items[?name=='${API_NAME}'].id" --output text 2>/dev/null)
-          if [ -n "$API_ID" ]; then
-            echo "api_exists=true" >> $GITHUB_OUTPUT
-            echo "api_id=$API_ID" >> $GITHUB_OUTPUT
-            echo "✅ API Gateway encontrada: $API_ID"
-          else
-            echo "api_exists=false" >> $GITHUB_OUTPUT
-            echo "⚠️ API Gateway não encontrada."
-          fi
-
-      # =========================
-      # Terraform Init / Validate
-      # =========================
       - name: Instalar Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -128,58 +42,16 @@ jobs:
         working-directory: infra
         run: terraform validate
 
-      # =========================
-      # Terraform Apply
-      # =========================
       - name: Terraform Apply
         if: env.TF_ACTION == 'apply'
         working-directory: infra
         run: |
-          echo "Criando recursos somente se não existirem..."
+          echo "🚀 Aplicando toda a infraestrutura..."
+          terraform apply -auto-approve -var="db_password=${{ env.DB_PASSWORD }}"
 
-          VPC_EXISTS="${{ steps.vpc_check.outputs.vpc_exists }}"
-          RDS_EXISTS="${{ steps.rds_check.outputs.rds_exists }}"
-          LAMBDA_EXISTS="${{ steps.lambda_check.outputs.lambda_exists }}"
-          API_EXISTS="${{ steps.api_check.outputs.api_exists }}"
-
-          if [ "$VPC_EXISTS" != "true" ]; then
-            terraform apply -auto-approve -target=aws_vpc.items_vpc -var="db_password=${{ secrets.DB_PASSWORD }}"
-          fi
-          if [ "$RDS_EXISTS" != "true" ]; then
-            terraform apply -auto-approve -target=aws_db_instance.items_db -var="db_password=${{ secrets.DB_PASSWORD }}"
-          fi
-          if [ "$LAMBDA_EXISTS" != "true" ]; then
-            terraform apply -auto-approve -target=aws_lambda_function.items_lambda -var="db_password=${{ secrets.DB_PASSWORD }}"
-          fi
-          if [ "$API_EXISTS" != "true" ]; then
-            terraform apply -auto-approve -target=aws_api_gateway_rest_api.items_api -var="db_password=${{ secrets.DB_PASSWORD }}"
-          fi
-      
-
-      # =========================
-      # Terraform Destroy
-      # =========================
       - name: Terraform Destroy
         if: env.TF_ACTION == 'destroy'
         working-directory: infra
         run: |
-          echo "Destruindo recursos somente se existirem..."
-
-          API_EXISTS="${{ steps.api_check.outputs.api_exists }}"
-          LAMBDA_EXISTS="${{ steps.lambda_check.outputs.lambda_exists }}"
-          RDS_EXISTS="${{ steps.rds_check.outputs.rds_exists }}"
-          VPC_EXISTS="${{ steps.vpc_check.outputs.vpc_exists }}"
-
-          if [ "$API_EXISTS" == "true" ]; then
-            terraform destroy -auto-approve -target=aws_api_gateway_rest_api.items_api -var="db_password=${{ secrets.DB_PASSWORD }}"
-          fi
-          if [ "$LAMBDA_EXISTS" == "true" ]; then
-            terraform destroy -auto-approve -target=aws_lambda_function.items_lambda -var="db_password=${{ secrets.DB_PASSWORD }}"
-          fi
-          if [ "$RDS_EXISTS" == "true" ]; then
-            terraform destroy -auto-approve -target=aws_db_instance.items_db -var="db_password=${{ secrets.DB_PASSWORD }}"
-          fi
-          if [ "$VPC_EXISTS" == "true" ]; then
-            terraform destroy -auto-approve -target=aws_vpc.items_vpc -var="db_password=${{ secrets.DB_PASSWORD }}"
-          fi
-      
+          echo "🛑 Destruindo toda a infraestrutura..."
+          terraform destroy -auto-approve -var="db_password=${{ env.DB_PASSWORD }}"

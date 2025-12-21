@@ -6,7 +6,7 @@ variable "aws_region" {
 
 variable "api_name" {
   type    = string
-  default = "avaliacoes-api"
+  default = "items-api"
 }
 
 variable "db_name" {

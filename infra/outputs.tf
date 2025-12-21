@@ -1,27 +1,24 @@
-output "api_id" {
-  value = aws_apigatewayv2_api.http_api.id
-}
-
-output "api_endpoint" {
-  value = aws_apigatewayv2_api.http_api.api_endpoint
-}
-
-output "items_lambda_name" {
-  value = aws_lambda_function.items.function_name
-}
-
-output "items_endpoint" {
-  value = "${aws_apigatewayv2_api.http_api.api_endpoint}/items"
-}
-
 output "vpc_id" {
-  value = aws_vpc.this.id
+  description = "ID da VPC"
+  value       = aws_vpc.this.id
+}
+
+output "subnet_ids" {
+  description = "IDs das subnets privadas"
+  value       = [aws_subnet.private_a.id, aws_subnet.private_b.id]
+}
+
+output "lambda_function_name" {
+  description = "Nome da Lambda function"
+  value       = aws_lambda_function.items.function_name
 }
 
 output "rds_endpoint" {
-  value = aws_db_instance.postgres.address
+  description = "Endpoint do RDS"
+  value       = aws_db_instance.postgres.address
 }
 
-output "lambda_security_group_id" {
-  value = aws_security_group.lambda_sg.id
+output "api_endpoint" {
+  description = "Endpoint da API Gateway"
+  value       = aws_apigatewayv2_stage.default.invoke_url
 }

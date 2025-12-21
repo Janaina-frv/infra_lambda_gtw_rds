@@ -1,38 +1,92 @@
+#####################################
+# Variáveis
+#####################################
+
+variable "vpc_cidr" {
+  description = "CIDR da VPC"
+  default     = "10.0.0.0/16"
+}
+
+variable "subnet_a_cidr" {
+  description = "CIDR do subnet A"
+  default     = "10.0.1.0/24"
+}
+
+variable "subnet_b_cidr" {
+  description = "CIDR do subnet B"
+  default     = "10.0.2.0/24"
+}
+
+variable "region" {
+  description = "Região AWS"
+  default     = "us-east-1"
+}
+
+variable "environment" {
+  description = "Ambiente da infra"
+  default     = "dev"
+}
+
+#####################################
+# VPC
+#####################################
+
 resource "aws_vpc" "this" {
-  cidr_block           = "10.0.0.0/16"
+  cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
 
   tags = {
-    Name = "app-vpc"
+    Name        = "app-vpc"
+    Environment = var.environment
+    Project     = "app"
   }
 }
 
+#####################################
+# Subnets privadas
+#####################################
+
 resource "aws_subnet" "private_a" {
   vpc_id            = aws_vpc.this.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "us-east-1a"
+  cidr_block        = var.subnet_a_cidr
+  availability_zone = "${var.region}a"
 
   tags = {
-    Name = "private-a"
+    Name        = "private-a"
+    Environment = var.environment
+    Project     = "app"
   }
 }
 
 resource "aws_subnet" "private_b" {
   vpc_id            = aws_vpc.this.id
-  cidr_block        = "10.0.2.0/24"
-  availability_zone = "us-east-1b"
+  cidr_block        = var.subnet_b_cidr
+  availability_zone = "${var.region}b"
 
   tags = {
-    Name = "private-b"
+    Name        = "private-b"
+    Environment = var.environment
+    Project     = "app"
   }
 }
 
-resource "aws_db_subnet_group" "this" {
-  name = "app-db-subnet-group"
+#####################################
+# DB Subnet Group
+#####################################
 
-  subnet_ids = [
-    aws_subnet.private_a.id,
-    aws_subnet.private_b.id
+resource "aws_db_subnet_group" "this" {
+  name       = "app-db-subnet-group"
+  subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
+
+  tags = {
+    Name        = "app-db-subnet-group"
+    Environment = var.environment
+    Project     = "app"
+  }
+
+  depends_on = [
+    aws_subnet.private_a,
+    aws_subnet.private_b
   ]
 }
