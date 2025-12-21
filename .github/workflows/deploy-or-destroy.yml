@@ -268,7 +268,7 @@ jobs:
       - name: Obter Option Group
         id: get_db_option_group
         run: |
-          OPTION_GROUP_NAME="default:postgres-17"
+          OPTION_GROUP_NAME="optionGroup"
           
           EXISTS=$(aws rds describe-option-groups \
             --option-group-name $OPTION_GROUP_NAME \
