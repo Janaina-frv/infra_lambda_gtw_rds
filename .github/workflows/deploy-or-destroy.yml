@@ -98,14 +98,6 @@ jobs:
           -target=aws_iam_role_policy_attachment.lambda_vpc_access \
           -auto-approve
     
-
-      - name: Destroy IAM Role
-        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          terraform destroy -target=aws_iam_role.lambda_exec_role -auto-approve
-    
-
       - name: Apply IAM Role e policies
         if: env.TF_ACTION == 'apply' && steps.get_iam_role.outputs.exists == 'false'
         working-directory: infra
@@ -356,3 +348,15 @@ jobs:
           echo "Criando Lambda..."
           terraform apply -target=aws_lambda_function.${LAMBDA_RESOURCE_NAME} -auto-approve
 
+
+
+
+
+
+          
+
+      - name: Destroy IAM Role
+        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy -target=aws_iam_role.lambda_exec_role -auto-approve
