@@ -1,44 +1,4 @@
 #####################################
-# Variáveis do RDS
-#####################################
-
-variable "db_name" {
-  description = "Nome do banco de dados"
-  default     = "appdb"
-}
-
-variable "db_username" {
-  description = "Usuário do banco de dados"
-  default     = "admin"
-}
-
-variable "db_password" {
-  description = "Senha do banco de dados"
-  default     = "change_me"
-  sensitive   = true
-}
-
-variable "db_instance_identifier" {
-  description = "Identificador da instância RDS"
-  default     = "items-db"
-}
-
-variable "db_instance_class" {
-  description = "Tipo da instância RDS"
-  default     = "db.t3.micro"
-}
-
-variable "db_allocated_storage" {
-  description = "Armazenamento em GB da instância RDS"
-  default     = 20
-}
-
-variable "db_engine_version" {
-  description = "Versão do Postgres"
-  default     = "15.4"
-}
-
-#####################################
 # Security Group do RDS
 #####################################
 
