@@ -44,18 +44,18 @@ jobs:
         working-directory: infra
         run: |
           echo "🔄 Sincronizando estado com AWS..."
-          terraform plan -refresh=true -var="db_password=${{ secrets.DB_PASSWORD }}"
+          terraform plan
 
       - name: Terraform Apply
         if: env.TF_ACTION == 'apply'
         working-directory: infra
         run: |
           echo "🚀 Aplicando toda a infraestrutura..."
-          terraform apply -auto-approve -refresh=true -var="db_password=${{ secrets.DB_PASSWORD }}"
+          terraform apply -auto-approve 
 
       - name: Terraform Destroy
         if: env.TF_ACTION == 'destroy'
         working-directory: infra
         run: |
           echo "🧨 Destruindo toda a infraestrutura..."
-          terraform destroy -auto-approve -refresh=true -var="db_password=${{ secrets.DB_PASSWORD }}"
+          terraform destroy -auto-approve 
