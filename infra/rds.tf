@@ -4,7 +4,7 @@
 
 resource "aws_security_group" "rds_sg" {
   name   = "rds-sg"
-  vpc_id = aws_vpc.this.id
+  vpc_id = aws_vpc.this_vpc.id
 
   ingress {
     from_port       = 5432
@@ -43,7 +43,7 @@ resource "aws_db_instance" "items_db" {
   username = var.db_username
   password = var.db_password
 
-  db_subnet_group_name   = aws_db_subnet_group.this.name
+  db_subnet_group_name   = aws_db_subnet_group.this_subnet_group.name
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
 
   publicly_accessible = false

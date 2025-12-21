@@ -31,7 +31,7 @@ variable "environment" {
 # VPC
 #####################################
 
-resource "aws_vpc" "this" {
+resource "aws_vpc" "this_vpc" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
@@ -47,7 +47,7 @@ resource "aws_vpc" "this" {
 #####################################
 
 resource "aws_subnet" "private_a" {
-  vpc_id            = aws_vpc.this.id
+  vpc_id            = aws_vpc.this_vpc.id
   cidr_block        = var.subnet_a_cidr
   availability_zone = "${var.region}a"
 
@@ -58,7 +58,7 @@ resource "aws_subnet" "private_a" {
 }
 
 resource "aws_subnet" "private_b" {
-  vpc_id            = aws_vpc.this.id
+  vpc_id            = aws_vpc.this_vpc.id
   cidr_block        = var.subnet_b_cidr
   availability_zone = "${var.region}b"
 
@@ -72,7 +72,7 @@ resource "aws_subnet" "private_b" {
 # DB Subnet Group
 #####################################
 
-resource "aws_db_subnet_group" "this" {
+resource "aws_db_subnet_group" "this_subnet_group" {
   name       = "app-db-subnet-group"
   subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
 

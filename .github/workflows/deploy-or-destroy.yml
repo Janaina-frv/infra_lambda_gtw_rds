@@ -14,8 +14,18 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: apply  # apply | destroy
+      TF_ACTION: destroy  # apply | destroy
       AWS_REGION: us-east-1
+      LAMBDA_RESOURCE_NAME: items
+      LAMBDA_FUNCTION_NAME: items-api-lambda
+      LAMBDA_PATH_JAVA: lambda/src/main/java/com/example/Handler.java
+      LAMBDA_PATH_CLASS: com/example/Handler.class
+      VPC_RESOURCE_NAME: this_vpc
+      API_RESOURCE_NAME: http_api
+      IAM_ROLE_RESOURCE_NAME: lambda_exec_role
+      RDS_SG_RESOURCE_NAME: rds_sg
+      DB_INSTANCE_IDENTIFIER: items-db
+      RDS_DB_RESOURCE_NAME: items_db
 
     steps:
       - name: Checkout código
@@ -46,16 +56,303 @@ jobs:
           echo "🔄 Sincronizando estado com AWS..."
           terraform plan
 
-      - name: Terraform Apply
-        if: env.TF_ACTION == 'apply'
-        working-directory: infra
-        run: |
-          echo "🚀 Aplicando toda a infraestrutura..."
-          terraform apply -auto-approve 
 
-      - name: Terraform Destroy
-        if: env.TF_ACTION == 'destroy'
+
+
+      - name: Obter IAM Role pelo Name
+        id: get_iam_role
+        run: |
+          ROLE_NAME="lambda-java-exec-role"
+          
+          if aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
+            echo "✅ IAM Role encontrada: $ROLE_NAME"
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "IAM_ROLE_NAME=$ROLE_NAME" >> $GITHUB_ENV
+          else
+            echo "⚠️ IAM Role não encontrada"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Importar policy attachment basic exec
+        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
-          echo "🧨 Destruindo toda a infraestrutura..."
-          terraform destroy -auto-approve 
+          terraform import \
+          aws_iam_role_policy_attachment.lambda_basic_exec \
+          ${IAM_ROLE_NAME}/arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+      - name: Importar policy attachment VPC access
+        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform import \
+          aws_iam_role_policy_attachment.lambda_vpc_access \
+          ${IAM_ROLE_NAME}/arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+      - name: Destroy policy attachments
+        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy \
+          -target=aws_iam_role_policy_attachment.lambda_basic_exec \
+          -target=aws_iam_role_policy_attachment.lambda_vpc_access \
+          -auto-approve
+    
+
+      - name: Destroy IAM Role
+        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy -target=aws_iam_role.lambda_exec_role -auto-approve
+    
+
+      - name: Apply IAM Role e policies
+        if: env.TF_ACTION == 'apply' && steps.get_iam_role.outputs.exists == 'false'
+        working-directory: infra
+        run: |
+          terraform apply \
+            -target=aws_iam_role.lambda_exec_role \
+            -target=aws_iam_role_policy_attachment.lambda_basic_exec \
+            -target=aws_iam_role_policy_attachment.lambda_vpc_access \
+            -auto-approve
+
+
+
+
+
+      - name: Obter VPC ID pelo Name
+        id: get_vpc
+        run: |
+          VPC_ID=$(aws ec2 describe-vpcs \
+            --filters "Name=tag:Name,Values=app-vpc" \
+            --query "Vpcs[0].VpcId" \
+            --output text)
+          
+          if [ "$VPC_ID" = "None" ]; then
+            echo "VPC não encontrada"
+            exit 1
+          fi
+          
+          echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
+
+      - name: Verificar existência da VPC
+        id: vpc_check
+        run: |
+          if aws ec2 describe-vpcs --vpc-ids $VPC_ID >/dev/null 2>&1; then
+            echo "✅ VPC encontrada: $VPC_ID"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ VPC não encontrada."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Importar VPC se existir
+        if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Importando VPC para o estado..."
+          terraform import aws_vpc.${VPC_RESOURCE_NAME} ${VPC_ID}
+
+      - name: Executar destroy da VPC
+        if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Destruindo VPC..."
+          terraform destroy -target=aws_vpc.${VPC_RESOURCE_NAME} -auto-approve
+
+      - name: Executar apply da VPC
+        if: env.TF_ACTION == 'apply' && steps.vpc_check.outputs.exists == 'false'
+        working-directory: infra
+        run: |
+          echo "Criando VPC..."
+          terraform apply -target=aws_vpc.${VPC_RESOURCE_NAME} -auto-approve
+
+
+
+
+
+      - name: Obter API Gateway ID pelo Name
+        id: get_api
+        run: |
+          API_ID=$(aws apigateway get-rest-apis \
+            --query "items[?name=='app-api'].id | [0]" \
+            --output text)
+          
+          if [ "$API_ID" = "None" ] || [ -z "$API_ID" ]; then
+            echo "API Gateway não encontrada"
+            echo "exists=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "API Gateway encontrada: $API_ID"
+          echo "API_ID=$API_ID" >> $GITHUB_ENV
+          echo "exists=true" >> $GITHUB_OUTPUT
+
+      - name: Verificar existência da API Gateway
+        id: api_check
+        run: |
+          if aws apigateway get-rest-api --rest-api-id $API_ID >/dev/null 2>&1; then
+            echo "✅ API Gateway encontrada: $API_ID"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ API Gateway não encontrada."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Importar API Gateway se existir
+        if: env.TF_ACTION == 'destroy' && steps.api_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Importando API Gateway para o estado..."
+          terraform import aws_api_gateway_rest_api.${API_RESOURCE_NAME} ${API_ID}
+
+      - name: Executar destroy da API Gateway
+        if: env.TF_ACTION == 'destroy' && steps.api_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Destruindo API Gateway..."
+          terraform destroy -target=aws_api_gateway_rest_api.${API_RESOURCE_NAME} -auto-approve
+
+      - name: Executar apply da API Gateway
+        if: env.TF_ACTION == 'apply' && steps.api_check.outputs.exists == 'false'
+        working-directory: infra
+        run: |
+          echo "Criando API Gateway..."
+          terraform apply -target=aws_api_gateway_rest_api.${API_RESOURCE_NAME} -auto-approve
+
+
+
+
+
+  - name: Obter Security Group do RDS
+    id: get_rds_sg
+    run: |
+      SG_ID=$(aws ec2 describe-security-groups \
+        --filters "Name=group-name,Values=rds-sg" \
+        --query "SecurityGroups[0].GroupId" \
+        --output text)
+      
+      if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
+        echo "Security Group do RDS não encontrado"
+        echo "exists=false" >> $GITHUB_OUTPUT
+        exit 0
+      fi
+      
+      echo "Security Group encontrado: $SG_ID"
+      echo "exists=true" >> $GITHUB_OUTPUT
+      echo "RDS_SG_ID=$SG_ID" >> $GITHUB_ENV
+
+  - name: Importar Security Group do RDS
+    if: env.TF_ACTION == 'destroy' && steps.get_rds_sg.outputs.exists == 'true'
+    working-directory: infra
+    run: |
+      terraform import aws_security_group.${RDS_SG_RESOURCE_NAME} ${RDS_SG_ID}
+
+  - name: Obter RDS Instance pelo identifier
+    id: get_rds
+    run: |
+      DB_ID="${DB_INSTANCE_IDENTIFIER}"
+      
+      if aws rds describe-db-instances \
+        --db-instance-identifier "$DB_ID" >/dev/null 2>&1; then
+        echo "RDS encontrada: $DB_ID"
+        echo "exists=true" >> $GITHUB_OUTPUT
+        echo "DB_INSTANCE_ID=$DB_ID" >> $GITHUB_ENV
+      else
+        echo "RDS não encontrada"
+        echo "exists=false" >> $GITHUB_OUTPUT
+      fi
+
+  - name: Importar RDS Instance
+    if: env.TF_ACTION == 'destroy' && steps.get_rds.outputs.exists == 'true'
+    working-directory: infra
+    run: |
+      terraform import aws_db_instance.${RDS_DB_RESOURCE_NAME} ${DB_INSTANCE_ID}
+
+  - name: Destroy RDS Instance
+    if: env.TF_ACTION == 'destroy' && steps.get_rds.outputs.exists == 'true'
+    working-directory: infra
+    run: |
+      terraform destroy -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} -auto-approve
+
+  - name: Destroy Security Group do RDS
+    if: env.TF_ACTION == 'destroy' && steps.get_rds_sg.outputs.exists == 'true'
+    working-directory: infra
+    run: |
+      terraform destroy -target=aws_security_group.${RDS_SG_RESOURCE_NAME} -auto-approve
+
+  - name: Apply RDS e Security Group
+    if: env.TF_ACTION == 'apply' && steps.get_rds.outputs.exists == 'false'
+    working-directory: infra
+    run: |
+      terraform apply \
+        -target=aws_security_group.${RDS_SG_RESOURCE_NAME} \
+        -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} \
+        -auto-approve
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      - name: Verificar existência de Lambda
+        id: lambda_check
+        run: |
+          if aws lambda get-function --function-name $LAMBDA_FUNCTION_NAME; then
+            echo "✅ Lambda encontrada: $LAMBDA_FUNCTION_NAME"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Lambda não encontrada."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Importar Lambda se existir
+        if: env.TF_ACTION == 'destroy' && steps.lambda_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Importando Lambda para o estado..."
+          terraform import aws_lambda_function.${LAMBDA_RESOURCE_NAME} ${LAMBDA_FUNCTION_NAME}
+
+      - name: Executar destroy da Lambda
+        if: env.TF_ACTION == 'destroy' && steps.lambda_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Destruindo Lambda..."
+          terraform destroy -target=aws_lambda_function.${LAMBDA_RESOURCE_NAME} -auto-approve
+
+      - name: Instalar Java e compilar (modo apply)
+        if: env.TF_ACTION == 'apply'
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Baixar dependência AWS Lambda Java Core
+        if: env.TF_ACTION == 'apply'
+        run: |
+          mkdir -p libs
+          curl -o libs/aws-lambda-java-core.jar https://repo1.maven.org/maven2/com/amazonaws/aws-lambda-java-core/1.2.1/aws-lambda-java-core-1.2.1.jar
+
+      - name: Compilar projeto e gerar JAR
+        if: env.TF_ACTION == 'apply'
+        run: |
+          mkdir -p infra/build/lambda
+          javac -cp libs/aws-lambda-java-core.jar -d infra/build/lambda $LAMBDA_PATH_JAVA
+          cd infra/build/lambda
+          jar cf hello-lambda.jar $LAMBDA_PATH_CLASS
+
+      - name: Executar apply da Lambda
+        if: env.TF_ACTION == 'apply' && steps.lambda_check.outputs.exists == 'false'
+        working-directory: infra
+        run: |
+          echo "Criando Lambda..."
+          terraform apply -target=aws_lambda_function.${LAMBDA_RESOURCE_NAME} -auto-approve
+

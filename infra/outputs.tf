@@ -1,6 +1,6 @@
 output "vpc_id" {
   description = "ID da VPC"
-  value       = aws_vpc.this.id
+  value       = aws_vpc.this_vpc.id
 }
 
 output "subnet_ids" {

@@ -75,5 +75,5 @@ variable "lambda_timeout" {
 
 variable "lambda_jar_file" {
   description = "Arquivo .jar da Lambda"
-  default     = "lambda.jar"
+  default     = "${path.module}/build/lambda/lambda.jar"
 }
