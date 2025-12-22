@@ -159,6 +159,39 @@ jobs:
             terraform import aws_vpc.${VPC_RESOURCE_NAME} ${VPC_ID}
           fi
 
+      #Verificar existencia de Subnets e importar
+
+      - name: Importar Subnets privadas se existirem
+        if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          # Subnet private_a
+          PRIVATE_A_ID=$(aws ec2 describe-subnets \
+            --filters "Name=tag:Name,Values=private-a" \
+            --query "Subnets[0].SubnetId" \
+            --output text)
+          
+          if [ -n "$PRIVATE_A_ID" ] && [ "$PRIVATE_A_ID" != "None" ]; then
+            echo "Importando Subnet private_a: $PRIVATE_A_ID"
+            terraform import aws_subnet.private_a $PRIVATE_A_ID || echo "Subnet private_a já importada"
+          else
+            echo "Subnet private_a não encontrada, pulando import"
+          fi
+          
+          # Subnet private_b
+          PRIVATE_B_ID=$(aws ec2 describe-subnets \
+            --filters "Name=tag:Name,Values=private-b" \
+            --query "Subnets[0].SubnetId" \
+            --output text)
+          
+          if [ -n "$PRIVATE_B_ID" ] && [ "$PRIVATE_B_ID" != "None" ]; then
+            echo "Importando Subnet private_b: $PRIVATE_B_ID"
+            terraform import aws_subnet.private_b $PRIVATE_B_ID || echo "Subnet private_b já importada"
+          else
+            echo "Subnet private_b não encontrada, pulando import"
+          fi
+
+
       #Verificar existencia de API Gateway e importar
 
       - name: Verificar e Obter API Gateway pelo Name
