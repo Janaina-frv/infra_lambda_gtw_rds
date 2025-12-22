@@ -63,6 +63,7 @@ jobs:
 
 
 
+      #Verificar existencia de IAM e importar
 
       - name: Verificar e Obter IAM Role pelo Name
         id: get_iam_role
@@ -289,6 +290,23 @@ jobs:
         run: |
           echo "Importando Lambda para o estado..."
           terraform import aws_lambda_function.${LAMBDA_RESOURCE_NAME} ${LAMBDA_FUNCTION_NAME}
+
+      - name: Importar Security Group da Lambda
+        if: env.TF_ACTION == 'destroy' && steps.lambda_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          # Pega o ID do Security Group da Lambda
+          SG_ID=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=lambda-sg" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text)
+          
+          if [ -n "$SG_ID" ] && [ "$SG_ID" != "None" ]; then
+            echo "Importando Security Group da Lambda: $SG_ID"
+            terraform import aws_security_group.lambda_sg $SG_ID
+          else
+            echo "Security Group da Lambda não encontrado, pulando import"
+          fi
 
       #Criação das infras na ordem correta
 
