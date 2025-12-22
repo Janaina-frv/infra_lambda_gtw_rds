@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: destroy  # apply | destroy
+      TF_ACTION: apply  # apply | destroy
       AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
       LAMBDA_FUNCTION_NAME: items-api-lambda
@@ -393,19 +393,36 @@ jobs:
           echo "Criando Lambda..."
           terraform apply -target=aws_lambda_function.${LAMBDA_RESOURCE_NAME} -auto-approve
 
-      - name: APPLY - Executar da API Gateway
+      - name: APPLY - API Gateway (completo)
         if: env.TF_ACTION == 'apply' && steps.get_api.outputs.exists == 'false'
         working-directory: infra
         run: |
-          echo "Criando API Gateway..."
+          echo "Criando API..."
           terraform apply \
-            -target=aws_apigatewayv2_api.http_api \
-            -target=aws_apigatewayv2_integration.items_lambda \
+            -target=aws_apigatewayv2_api.${API_RESOURCE_NAME} \
+            -auto-approve
+          
+          echo "Criando integração com Lambda..."
+          terraform apply \
+            -target=aws_apigatewayv2_integration.${LAMBDA_RESOURCE_NAME} \
+            -auto-approve
+          
+          echo "Criando rotas..."
+          terraform apply \
             -target=aws_apigatewayv2_route.health \
             -target=aws_apigatewayv2_route.post_items \
+            -auto-approve
+          
+          echo "Criando stage..."
+          terraform apply \
             -target=aws_apigatewayv2_stage.default \
+            -auto-approve
+          
+          echo "Criando permissão da Lambda para API Gateway..."
+          terraform apply \
             -target=aws_lambda_permission.allow_api_gateway \
             -auto-approve
+
 
       #Destruição das infras na ordem correta
 
