@@ -217,7 +217,7 @@ jobs:
           fi
 
       - name: Importar API Gateway se existir
-        if: env.TF_ACTION == 'destroy' && steps.api_check.outputs.exists == 'true'
+        if: env.TF_ACTION == 'destroy' && steps.get_api.outputs.exists == 'true'
         working-directory: infra
         run: |
           echo "Importando API Gateway para o estado..."
@@ -410,7 +410,7 @@ jobs:
       #Destruição das infras na ordem correta
 
       - name: DESTROY - API Gateway
-        if: env.TF_ACTION == 'destroy' && steps.api_check.outputs.exists == 'true'
+        if: env.TF_ACTION == 'destroy' && steps.get_api.outputs.exists == 'true'
         working-directory: infra
         run: |
           echo "Destruindo API Gateway..."
