@@ -409,13 +409,26 @@ jobs:
 
       #Destruição das infras na ordem correta
 
-      - name: DESTROY - API Gateway
+      - name: DESTROY - API Gateway (completo)
         if: env.TF_ACTION == 'destroy' && steps.get_api.outputs.exists == 'true'
         working-directory: infra
         run: |
-          echo "Destruindo API Gateway..."
+          echo "Destruindo rotas..."
+          terraform destroy -target=aws_apigatewayv2_route.health -auto-approve
+          terraform destroy -target=aws_apigatewayv2_route.post_items -auto-approve
+          
+          echo "Destruindo integração..."
+          terraform destroy -target=aws_apigatewayv2_integration.${LAMBDA_RESOURCE_NAME} -auto-approve
+          
+          echo "Destruindo stage..."
+          terraform destroy -target=aws_apigatewayv2_stage.default -auto-approve
+          
+          echo "Destruindo permissão da Lambda..."
+          terraform destroy -target=aws_lambda_permission.allow_api_gateway -auto-approve
+          
+          echo "Destruindo API..."
           terraform destroy -target=aws_apigatewayv2_api.${API_RESOURCE_NAME} -auto-approve
-    
+
 
       - name: DESTROY - Lambda
         if: env.TF_ACTION == 'destroy' && steps.lambda_check.outputs.exists == 'true'
