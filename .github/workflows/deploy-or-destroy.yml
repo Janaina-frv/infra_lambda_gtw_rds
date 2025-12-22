@@ -162,7 +162,7 @@ jobs:
       #Verificar existencia de Subnets e importar
 
       - name: Importar Subnets privadas se existirem
-        if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
+        if: env.TF_ACTION == 'destroy' && steps.get_vpc.outputs.exists == 'true'
         working-directory: infra
         run: |
           # Subnet private_a
