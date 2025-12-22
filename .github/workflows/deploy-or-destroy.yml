@@ -344,7 +344,7 @@ jobs:
       #Criação das infras na ordem correta
 
       - name: APPLY - Executar da VPC
-        if: env.TF_ACTION == 'apply' && steps.vpc_check.outputs.exists == 'false'
+        if: env.TF_ACTION == 'apply' && steps.get_vpc.outputs.exists == 'false'
         working-directory: infra
         run: |
           echo "Criando VPC..."
@@ -394,7 +394,7 @@ jobs:
           terraform apply -target=aws_lambda_function.${LAMBDA_RESOURCE_NAME} -auto-approve
 
       - name: APPLY - Executar da API Gateway
-        if: env.TF_ACTION == 'apply' && steps.api_check.outputs.exists == 'false'
+        if: env.TF_ACTION == 'apply' && steps.get_api.outputs.exists == 'false'
         working-directory: infra
         run: |
           echo "Criando API Gateway..."
