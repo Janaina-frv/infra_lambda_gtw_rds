@@ -409,7 +409,7 @@ jobs:
     
 
       - name: DESTROY - Security Groups da VPC
-        if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
+        if: env.TF_ACTION == 'destroy' && steps.get_vpc.outputs.exists == 'true'
         working-directory: infra
         run: |
           echo "Destruindo Security Groups..."
@@ -418,7 +418,7 @@ jobs:
     
 
       - name: DESTROY - Subnets da VPC
-        if: env.TF_ACTION == 'destroy' && steps.vpc_check.outputs.exists == 'true'
+        if: env.TF_ACTION == 'destroy' && steps.get_vpc.outputs.exists == 'true'
         working-directory: infra
         run: |
           echo "Destruindo Subnets..."
