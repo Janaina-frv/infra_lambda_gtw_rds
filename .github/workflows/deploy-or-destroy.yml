@@ -292,7 +292,7 @@ jobs:
           terraform import aws_lambda_function.${LAMBDA_RESOURCE_NAME} ${LAMBDA_FUNCTION_NAME}
 
       - name: Importar Security Group da Lambda
-        if: env.TF_ACTION == 'destroy' && steps.lambda_check.outputs.exists == 'true'
+        if: env.TF_ACTION == 'destroy' && steps.get_vpc.outputs.exists == 'true'
         working-directory: infra
         run: |
           # Pega o ID do Security Group da Lambda
