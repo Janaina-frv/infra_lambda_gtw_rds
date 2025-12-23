@@ -379,7 +379,8 @@ jobs:
       - name: Compilar Lambda com Maven
         if: env.TF_ACTION == 'apply'
         working-directory: lambda
-        run: mvn clean package
+        run: mvn clean package -U
+
       - name: Copiar JAR gerado para a pasta de deploy
         if: env.TF_ACTION == 'apply'
         run: |
