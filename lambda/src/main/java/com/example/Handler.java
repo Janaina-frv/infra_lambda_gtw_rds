@@ -12,9 +12,18 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Map;
 
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
+import com.amazonaws.services.sqs.model.SendMessageResult;
+
+
 public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
 
     private static final ObjectMapper mapper = new ObjectMapper();
+    private static final String SQS_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/757367947438/feedback_urgente-sqs";
+    private final AmazonSQS sqsClient = AmazonSQSClientBuilder.defaultClient();
+
 
     private void criarTabelaSeNaoExistir(Connection conn) throws SQLException {
         String sql = """
@@ -74,10 +83,8 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
         String pass = System.getenv("DB_PASS");
 
         try (Connection conn = DriverManager.getConnection(url, user, pass)) {
-            // 1️⃣ cria a tabela se não existir
             criarTabelaSeNaoExistir(conn);
 
-            // 2️⃣ insere o item
             String sqlInsert = "INSERT INTO items (descricao, nota) VALUES (?, ?)";
             try (PreparedStatement stmt = conn.prepareStatement(sqlInsert)) {
                 stmt.setString(1, item.getDescricao());
@@ -86,7 +93,22 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
             }
 
             context.getLogger().log("Item inserido com sucesso no banco.");
-        }
 
+            // Envia para SQS se a nota for menor que 5
+            if (item.getNota() < 5 && SQS_QUEUE_URL != null && !SQS_QUEUE_URL.isEmpty()) {
+                try {
+                    SendMessageRequest sendMsgRequest = new SendMessageRequest()
+                            .withQueueUrl(SQS_QUEUE_URL)
+                            .withMessageBody(mapper.writeValueAsString(item))
+                            .withDelaySeconds(0);
+
+                    SendMessageResult result = sqsClient.sendMessage(sendMsgRequest);
+                    context.getLogger().log("Mensagem enviada para SQS. MessageId: " + result.getMessageId());
+                } catch (Exception e) {
+                    context.getLogger().log("Erro ao enviar mensagem para SQS: " + e.getMessage());
+                }
+            }
+        }
     }
+
 }
