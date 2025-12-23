@@ -95,13 +95,14 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
             context.getLogger().log("Item inserido com sucesso no banco.");
 
             // Envia para SQS se a nota for menor que 5
-            if (item.getNota() < 5 && SQS_QUEUE_URL != null && !SQS_QUEUE_URL.isEmpty()) {
+            if (item.getNota() < 5.00) {
+                context.getLogger().log("Nota esta abaixo de 5, enviando mensagem urgente");
                 try {
                     SendMessageRequest sendMsgRequest = new SendMessageRequest()
                             .withQueueUrl(SQS_QUEUE_URL)
                             .withMessageBody(mapper.writeValueAsString(item))
                             .withDelaySeconds(0);
-
+                    context.getLogger().log("Enviando mensagem com request: " + sendMsgRequest);
                     SendMessageResult result = sqsClient.sendMessage(sendMsgRequest);
                     context.getLogger().log("Mensagem enviada para SQS. MessageId: " + result.getMessageId());
                 } catch (Exception e) {
