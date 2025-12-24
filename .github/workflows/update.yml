@@ -1,0 +1,39 @@
+name: Update Lambda Code
+
+on:
+  push:
+    branches:
+      - update
+
+jobs:
+  update-lambda:
+    runs-on: ubuntu-latest
+    env:
+      LAMBDA_RESOURCE_NAME: items
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Compilar Lambda com Maven
+        working-directory: lambda
+        run: mvn clean package -U
+
+      - name: Copiar JAR gerado para pasta de deploy
+        run: |
+          mkdir -p infra/build/lambda
+          cp lambda/target/hello-lambda-1.0.jar infra/build/lambda/lambda.jar
+
+      - name: Atualizar código da Lambda
+        working-directory: infra
+        run: |
+          echo "Atualizando apenas o código da Lambda..."
+          terraform apply \
+            -target=aws_lambda_function.${LAMBDA_RESOURCE_NAME} \
+            -auto-approve

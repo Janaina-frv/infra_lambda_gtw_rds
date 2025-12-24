@@ -22,7 +22,7 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
 
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final String SQS_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/757367947438/feedback_urgente-sqs";
-    private final AmazonSQS sqsClient = AmazonSQSClientBuilder.defaultClient();
+    private final AmazonSQS sqsClient = AmazonSQSClientBuilder.standard().withRegion("us-east-1").build();
 
 
     private void criarTabelaSeNaoExistir(Connection conn) throws SQLException {
