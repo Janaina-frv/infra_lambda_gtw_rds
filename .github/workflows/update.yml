@@ -9,6 +9,7 @@ jobs:
   update-lambda:
     runs-on: ubuntu-latest
     env:
+      AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
 
     steps:
