@@ -105,9 +105,13 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
                     context.getLogger().log("Enviando mensagem com request: " + sendMsgRequest);
                     SendMessageResult result = sqsClient.sendMessage(sendMsgRequest);
                     context.getLogger().log("Mensagem enviada para SQS. MessageId: " + result.getMessageId());
-                } catch (Exception e) {
-                    context.getLogger().log("Erro ao enviar mensagem para SQS: " + e.getMessage());
+                } catch (Throwable t) {
+                    context.getLogger().log("Erro inesperado ao enviar para SQS: " + t.toString());
+                    for (StackTraceElement s : t.getStackTrace()) {
+                        context.getLogger().log(s.toString());
+                    }
                 }
+
             }
         }
     }
