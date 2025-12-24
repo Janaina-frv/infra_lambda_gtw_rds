@@ -5,9 +5,14 @@ on:
     branches:
       - update
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   update-lambda:
     runs-on: ubuntu-latest
+
     env:
       AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
@@ -40,6 +45,8 @@ jobs:
         run: |
           echo "🔄 Sincronizando estado com AWS..."
           terraform plan
+
+      #Update do código na lambda
 
       - name: Instalar Java 17
         uses: actions/setup-java@v3

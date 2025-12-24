@@ -1,7 +1,3 @@
-## VPC anda não esta destruindo e dois groups no RDS nao apagam sozinhos, pq sao criados deafult
-
-
-
 name: Deploy or Destroy AWS Infra (VPC + RDS + Lambda + API Gateway)
 
 on:
