@@ -68,7 +68,7 @@ jobs:
       - name: Verificar e Obter IAM Role pelo Name
         id: get_iam_role
         run: |
-          ROLE_NAME="lambda-java-exec-role"
+          ROLE_NAME="lambda-java-items-api-role"
           
           if aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
             echo "✅ IAM Role encontrada: $ROLE_NAME"
