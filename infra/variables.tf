@@ -72,3 +72,28 @@ variable "lambda_timeout" {
   description = "Timeout da Lambda em segundos"
   default     = 10
 }
+
+variable "vpc_cidr" {
+  description = "CIDR da VPC"
+  default     = "10.0.0.0/16"
+}
+
+variable "subnet_a_cidr" {
+  description = "CIDR do subnet A"
+  default     = "10.0.1.0/24"
+}
+
+variable "subnet_b_cidr" {
+  description = "CIDR do subnet B"
+  default     = "10.0.2.0/24"
+}
+
+variable "region" {
+  description = "Região AWS"
+  default     = "us-east-1"
+}
+
+variable "environment" {
+  description = "Ambiente da infra"
+  default     = "dev"
+}

@@ -1,26 +1,4 @@
 #####################################
-# Security Group da Lambda
-#####################################
-
-resource "aws_security_group" "lambda_sg" {
-  name   = "lambda-sg"
-  vpc_id = aws_vpc.this_vpc.id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name        = "lambda-sg"
-    Environment = var.environment
-    Project     = "app"
-  }
-}
-
-#####################################
 # Função Lambda
 #####################################
 

@@ -1,33 +1,4 @@
 #####################################
-# Variáveis
-#####################################
-
-variable "vpc_cidr" {
-  description = "CIDR da VPC"
-  default     = "10.0.0.0/16"
-}
-
-variable "subnet_a_cidr" {
-  description = "CIDR do subnet A"
-  default     = "10.0.1.0/24"
-}
-
-variable "subnet_b_cidr" {
-  description = "CIDR do subnet B"
-  default     = "10.0.2.0/24"
-}
-
-variable "region" {
-  description = "Região AWS"
-  default     = "us-east-1"
-}
-
-variable "environment" {
-  description = "Ambiente da infra"
-  default     = "dev"
-}
-
-#####################################
 # VPC
 #####################################
 
@@ -87,13 +58,16 @@ resource "aws_db_subnet_group" "this_subnet_group" {
   ]
 }
 
+#####################################
+# Endpoint Interface SQS
+#####################################
 
 resource "aws_vpc_endpoint" "sqs" {
-  vpc_id            = aws_vpc.this_vpc.id
-  service_name      = "com.amazonaws.${var.region}.sqs"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = [aws_subnet.private_a.id, aws_subnet.private_b.id]
-  security_group_ids = [aws_security_group.lambda_sg.id]
+  vpc_id             = aws_vpc.this_vpc.id
+  service_name       = "com.amazonaws.${var.region}.sqs"
+  vpc_endpoint_type  = "Interface"
+  subnet_ids         = [aws_subnet.private_a.id, aws_subnet.private_b.id]
+  security_group_ids = [aws_security_group.endpoint_sg.id]
 
   private_dns_enabled = true
 }
