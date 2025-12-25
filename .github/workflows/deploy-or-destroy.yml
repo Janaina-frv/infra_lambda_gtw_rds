@@ -78,14 +78,14 @@ jobs:
         run: |
           echo "Importando IAM Role para o Terraform state..."
           terraform import aws_iam_role.lambda_exec_role $IAM_ROLE_NAME
-
-      # Importar policy attachment basic exec
+    
+          # Importar policy attachment basic exec (se existir)
       - name: Importar policy attachment basic exec (se existir)
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
           POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-          ATTACHED=$(aws iam list-attached-role-policies --role-name $IAM_ROLE_NAME \
+          ATTACHED=$(aws iam list-attached-role-policies --role-name "$IAM_ROLE_NAME" \
             --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" --output text)
           if [ -n "$ATTACHED" ]; then
             echo "Importando attachment basic exec..."
@@ -94,13 +94,13 @@ jobs:
             echo "Policy basic exec não anexada, pulando import"
           fi
 
-      # Importar policy attachment VPC access
+      # Importar policy attachment VPC access (se existir)
       - name: Importar policy attachment VPC access (se existir)
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
           POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-          ATTACHED=$(aws iam list-attached-role-policies --role-name $IAM_ROLE_NAME \
+          ATTACHED=$(aws iam list-attached-role-policies --role-name "$IAM_ROLE_NAME" \
             --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" --output text)
           if [ -n "$ATTACHED" ]; then
             echo "Importando attachment VPC access..."
@@ -109,22 +109,25 @@ jobs:
             echo "Policy VPC access não anexada, pulando import"
           fi
 
-      # Importar policy attachment custom SQS
+      # Importar policy attachment custom SQS (se existir) — sem usar terraform output
       - name: Importar policy attachment custom SQS (se existir)
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
-          POLICY_ARN=$(terraform output -raw lambda_sqs_policy_arn)
-          ATTACHED=$(aws iam list-attached-role-policies --role-name $IAM_ROLE_NAME \
-          --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" --output text)
-          if [ -n "$ATTACHED" ]; then
-          echo "Importando attachment custom SQS..."
+          # Nome da policy customizada criada no Terraform (ajuste se for diferente)
+          CUSTOM_POLICY_NAME="lambda-sqs-policy"
+          
+          # Descobre o ARN da policy customizada anexada à role pelo nome
+          POLICY_ARN=$(aws iam list-attached-role-policies --role-name "$IAM_ROLE_NAME" \
+          --query "AttachedPolicies[?PolicyName=='${CUSTOM_POLICY_NAME}'].PolicyArn" --output text)
+          
+          if [ -n "$POLICY_ARN" ] && [ "$POLICY_ARN" != "None" ]; then
+          echo "Importando attachment custom SQS (${CUSTOM_POLICY_NAME})..."
           terraform import aws_iam_role_policy_attachment.lambda_sqs_attach ${IAM_ROLE_NAME}/${POLICY_ARN}
           else
-          echo "Policy custom SQS não anexada, pulando import"
+          echo "Policy custom SQS (${CUSTOM_POLICY_NAME}) não anexada, pulando import"
           fi
 
-      
       #Verificar existencia de VPC e importar
 
       - name: Verificar e Obter VPC pelo Name
