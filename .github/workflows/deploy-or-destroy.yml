@@ -82,28 +82,32 @@ jobs:
           echo "Importando IAM Role para o Terraform state..."
           terraform import aws_iam_role.lambda_exec_role $IAM_ROLE_NAME
 
-
-
       - name: Importar policy attachment basic exec (se existir)
-        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
-        working-directory: infra
         run: |
           POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-
-          ATTACHED=$(aws iam list-attached-role-policies \
-            --role-name $IAM_ROLE_NAME \
-            --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" \
-            --output text)
-
+          ATTACHED=$(aws iam list-attached-role-policies --role-name $IAM_ROLE_NAME \
+            --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" --output text)
           if [ -n "$ATTACHED" ]; then
-            echo "Policy basic exec anexada, importando..."
-            terraform import \
-              aws_iam_role_policy_attachment.lambda_basic_exec \
-              ${IAM_ROLE_NAME}/${POLICY_ARN}
-          else
-            echo "Policy basic exec NÃO está anexada, pulando import"
+            terraform import aws_iam_role_policy_attachment.lambda_basic_exec ${IAM_ROLE_NAME}/${POLICY_ARN}
           fi
-      
+
+      - name: Importar policy attachment VPC access (se existir)
+        run: |
+          POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+          ATTACHED=$(aws iam list-attached-role-policies --role-name $IAM_ROLE_NAME \
+            --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" --output text)
+          if [ -n "$ATTACHED" ]; then
+            terraform import aws_iam_role_policy_attachment.lambda_vpc_access ${IAM_ROLE_NAME}/${POLICY_ARN}
+          fi
+
+      - name: Importar policy attachment custom SQS (se existir)
+        run: |
+          POLICY_ARN=$(terraform output -raw lambda_sqs_policy_arn) # ou direto do recurso
+          ATTACHED=$(aws iam list-attached-role-policies --role-name $IAM_ROLE_NAME \
+          --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" --output text)
+          if [ -n "$ATTACHED" ]; then
+          terraform import aws_iam_role_policy_attachment.lambda_sqs_attach ${IAM_ROLE_NAME}/${POLICY_ARN}
+          fi
 
       - name: Importar policy attachment VPC access (se existir)
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
@@ -275,6 +279,32 @@ jobs:
           echo "Importando DB Subnet Group para o Terraform state..."
           terraform import aws_db_subnet_group.this_subnet_group $DB_SUBNET_GROUP_NAME || true
 
+      # Verificar e importar Security Group do Endpoint SQS
+      - name: Verificar Security Group do Endpoint SQS
+        id: check_sqs_endpoint_sg
+        run: |
+          SG_ID=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=sqs-endpoint-sg" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text)
+          
+          if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
+            echo "Security Group do Endpoint SQS não encontrado"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "Security Group do Endpoint SQS encontrado: $SG_ID"
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "SQS_ENDPOINT_SG_ID=$SG_ID" >> $GITHUB_ENV
+          fi
+
+      - name: Importar Security Group do Endpoint SQS
+        if: env.TF_ACTION == 'destroy' && steps.check_sqs_endpoint_sg.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Importando Security Group do Endpoint SQS: ${SQS_ENDPOINT_SG_ID}"
+          terraform import aws_security_group.endpoint_sg ${SQS_ENDPOINT_SG_ID}
+
+
       #Verificar existencia de Security Group do RDS e importar
 
       - name: Verificar e Obter Security Group do RDS
@@ -347,6 +377,20 @@ jobs:
           echo "Criando VPC..."
           terraform apply -target=aws_vpc.${VPC_RESOURCE_NAME} -auto-approve
 
+      - name: APPLY - Endpoint SQS e Security Group
+        if: env.TF_ACTION == 'apply' && steps.check_sqs_endpoint_sg.outputs.exists == 'false'
+        working-directory: infra
+        run: |
+          echo "Criando Security Group do Endpoint SQS..."
+          terraform apply \
+            -target=aws_security_group.endpoint_sg \
+            -auto-approve
+          
+          echo "Criando Endpoint SQS..."
+          terraform apply \
+            -target=aws_vpc_endpoint.sqs \
+            -auto-approve
+
       - name: APPLY - RDS e Security Group
         if: env.TF_ACTION == 'apply' && steps.get_rds.outputs.exists == 'false'
         working-directory: infra
@@ -364,6 +408,7 @@ jobs:
             -target=aws_iam_role.lambda_exec_role \
             -target=aws_iam_role_policy_attachment.lambda_basic_exec \
             -target=aws_iam_role_policy_attachment.lambda_vpc_access \
+            -target=aws_iam_role_policy_attachment.lambda_sqs_attach \
             -auto-approve
 
       - name: Instalar Java e compilar (modo apply)
@@ -431,8 +476,9 @@ jobs:
           terraform destroy \
             -target=aws_iam_role_policy_attachment.lambda_basic_exec \
             -target=aws_iam_role_policy_attachment.lambda_vpc_access \
+            -target=aws_iam_role_policy_attachment.lambda_sqs_attach \
             -auto-approve
-    
+  
 
       - name: DESTROY - IAM Role
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
@@ -472,7 +518,20 @@ jobs:
         run: |
           echo "Destruindo DB Subnet Group..."
           terraform destroy -target=aws_db_subnet_group.this_subnet_group -auto-approve
-    
+
+      - name: DESTROY - Endpoint SQS
+        if: env.TF_ACTION == 'destroy' && steps.check_sqs_endpoint_sg.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Destruindo Endpoint SQS..."
+          terraform destroy -target=aws_vpc_endpoint.sqs -auto-approve
+
+      - name: DESTROY - Security Group do Endpoint SQS
+        if: env.TF_ACTION == 'destroy' && steps.check_sqs_endpoint_sg.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Destruindo Security Group do Endpoint SQS..."
+          terraform destroy -target=aws_security_group.endpoint_sg -auto-approve
 
       - name: DESTROY - Security Groups da VPC
         if: env.TF_ACTION == 'destroy' && steps.get_vpc.outputs.exists == 'true'
