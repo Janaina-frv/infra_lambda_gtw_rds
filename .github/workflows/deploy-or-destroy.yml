@@ -71,12 +71,17 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      # Importar IAM Role
+      # Importar IAM Role se existir
       - name: Importar IAM Role se existir
         working-directory: infra
         run: |
+          if [ -n "$IAM_ROLE_NAME" ]; then
           echo "Importando IAM Role para o Terraform state..."
-          terraform import aws_iam_role.lambda_exec_role $IAM_ROLE_NAME
+          terraform import aws_iam_role.lambda_exec_role "$IAM_ROLE_NAME" || true
+          else
+          echo "IAM_ROLE_NAME não definido, pulando import."
+          fi
+
 
       # Importar Policy  Custom
       - name: Importar Policy Custom
