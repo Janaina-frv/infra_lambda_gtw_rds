@@ -157,19 +157,25 @@ jobs:
         working-directory: infra
         run: |
           POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-          
-          ATTACHED=$(aws iam list-attached-role-policies \
-          --role-name "$IAM_ROLE_NAME" \
-          --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" \
-          --output text)
-          
-          if [ -n "$ATTACHED" ]; then
-          echo "Policy está anexada, importando attachment..."
-          terraform import aws_iam_role_policy_attachment.lambda_basic_exec ${IAM_ROLE_NAME}/${POLICY_ARN}
-          else
-          echo "Policy existe mas não está anexada, pulando import"
+
+          if [ -z "$IAM_ROLE_NAME" ]; then
+            echo "IAM_ROLE_NAME não definido, pulando import"
+            exit 0
           fi
-    
+
+          ATTACHED=$(aws iam list-attached-role-policies \
+            --role-name "$IAM_ROLE_NAME" \
+            --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" \
+            --output text)
+
+          if [ -n "$ATTACHED" ]; then
+            echo "Policy está anexada, importando attachment..."
+            terraform import aws_iam_role_policy_attachment.lambda_basic_exec ${IAM_ROLE_NAME}/${POLICY_ARN}
+          else
+            echo "Policy existe mas não está anexada, pulando import"
+          fi
+      
+      
 
       # Step 1 - Verificar se a policy VPC access existe
       - name: Verificar se a policy VPC access existe
