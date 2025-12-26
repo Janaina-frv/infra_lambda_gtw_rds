@@ -100,10 +100,10 @@ jobs:
           if [ -n "$POLICY_ARN" ] && [ "$POLICY_ARN" != "None" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "policy_arn=$POLICY_ARN" >> $GITHUB_OUTPUT
-            echo "Policy custom existe: $POLICY_ARN"
+            echo "✅ Policy custom existe: $POLICY_ARN"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Policy custom não existe"
+            echo "⚠️ Policy custom não existe"
           fi
 
       # Step 2 - Importar policy custom (somente se existir)
@@ -134,85 +134,6 @@ jobs:
           else
           echo "Policy custom existe mas não está anexada, pulando import"
           fi
-
-
-      # Step 1 - Verificar se a policy existe
-      - name: Verificar se a policy basic exec existe
-        id: check_policy
-        working-directory: infra
-        run: |
-          POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-          
-          if aws iam get-policy --policy-arn "$POLICY_ARN" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Policy basic exec existe"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Policy basic exec não existe"
-          fi
-
-      # Step 2 - Importar attachment (somente se policy existir)
-      - name: Importar policy attachment basic exec (se estiver anexada)
-        if: steps.check_policy.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-
-          if [ -z "$IAM_ROLE_NAME" ]; then
-            echo "IAM_ROLE_NAME não definido, pulando import"
-            exit 0
-          fi
-
-          ATTACHED=$(aws iam list-attached-role-policies \
-            --role-name "$IAM_ROLE_NAME" \
-            --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" \
-            --output text)
-
-          if [ -n "$ATTACHED" ]; then
-            echo "Policy está anexada, importando attachment..."
-            terraform import aws_iam_role_policy_attachment.lambda_basic_exec ${IAM_ROLE_NAME}/${POLICY_ARN}
-          else
-            echo "Policy existe mas não está anexada, pulando import"
-          fi
-      
-      
-
-      # Step 1 - Verificar se a policy VPC access existe
-      - name: Verificar se a policy VPC access existe
-        id: check_vpc_policy
-        working-directory: infra
-        run: |
-          POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-          
-          if aws iam get-policy --policy-arn "$POLICY_ARN" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Policy VPC access existe"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Policy VPC access não existe"
-          fi
-
-      # Step 2 - Importar attachment VPC access (somente se policy existir)
-      - name: Importar policy attachment VPC access (se estiver anexada)
-        if: steps.check_vpc_policy.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-          
-          ATTACHED=$(aws iam list-attached-role-policies \
-          --role-name "$IAM_ROLE_NAME" \
-          --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" \
-          --output text)
-          
-          if [ -n "$ATTACHED" ]; then
-          echo "Policy VPC access está anexada, importando attachment..."
-          terraform import aws_iam_role_policy_attachment.lambda_vpc_access ${IAM_ROLE_NAME}/${POLICY_ARN}
-          else
-          echo "Policy VPC access existe mas não está anexada, pulando import"
-          fi
-
-
-
 
       #Verificar existencia de VPC e importar
 
@@ -309,7 +230,7 @@ jobs:
           terraform import aws_apigatewayv2_api.${API_RESOURCE_NAME} ${API_ID}
 
 
-#Verificar existencia de RDS e importar
+      #Verificar existencia de RDS e importar
 
       - name: Verificar e Obter RDS Instance pelo identifier
         id: get_rds
@@ -389,7 +310,6 @@ jobs:
           echo "Importando Security Group do Endpoint SQS: ${SQS_ENDPOINT_SG_ID}"
           terraform import aws_security_group.endpoint_sg ${SQS_ENDPOINT_SG_ID}
 
-
       #Verificar existencia de Security Group do RDS e importar
 
       - name: Verificar e Obter Security Group do RDS
@@ -453,7 +373,7 @@ jobs:
             echo "Security Group da Lambda não encontrado, pulando import"
           fi
 
-      #Criação das infras na ordem correta
+      ####Criação das infras na ordem correta
 
       - name: APPLY - Executar da VPC
         if: env.TF_ACTION == 'apply' && steps.get_vpc.outputs.exists == 'false'
@@ -569,7 +489,7 @@ jobs:
             -auto-approve
 
 
-      #Destruição das infras na ordem correta
+      #####Destruição das infras na ordem correta
 
       # Destroy attachments
       - name: DESTROY - IAM policy attachments
