@@ -83,74 +83,130 @@ jobs:
           fi
 
 
-      # Importar Policy  Custom
-      - name: Importar Policy Custom
-        id: get_policy_custom
+      # Step 1 - Verificar se a policy custom existe
+      - name: Verificar se a policy custom SQS existe
+        id: check_custom_policy
         working-directory: infra
         env:
           CUSTOM_POLICY_NAME: lambda-sqs-policy
         run: |
           echo "Verificando existência da policy '${CUSTOM_POLICY_NAME}'..."
+          
           POLICY_ARN=$(aws iam list-policies \
-          --scope Local \
-          --query "Policies[?PolicyName=='${CUSTOM_POLICY_NAME}'].Arn | [0]" \
-          --output text)
-          echo "exists=true" >> $GITHUB_OUTPUT
+            --scope Local \
+            --query "Policies[?PolicyName=='${CUSTOM_POLICY_NAME}'].Arn | [0]" \
+            --output text)
           
           if [ -n "$POLICY_ARN" ] && [ "$POLICY_ARN" != "None" ]; then
-          echo "Policy já existe: ${POLICY_ARN}. Importando para o Terraform state..."
-          terraform import aws_iam_policy.lambda_sqs_policy "${POLICY_ARN}" || true
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "policy_arn=$POLICY_ARN" >> $GITHUB_OUTPUT
+            echo "Policy custom existe: $POLICY_ARN"
           else
-          echo "Policy não existe. "
-          echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Policy custom não existe"
           fi
-          
 
-      # Importar policy attachment basic exec (se existir)
-      - name: Importar policy attachment basic exec (se existir)
+      # Step 2 - Importar policy custom (somente se existir)
+      - name: Importar policy custom SQS
+        if: steps.check_custom_policy.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          POLICY_ARN="${{ steps.check_custom_policy.outputs.policy_arn }}"
+          
+          echo "Importando policy custom para o Terraform state..."
+          terraform import aws_iam_policy.lambda_sqs_policy "$POLICY_ARN" || true
+
+      # Step 3 - Importar attachment da policy custom (somente se policy existir)
+      - name: Importar policy attachment custom SQS (se estiver anexada)
+        if: steps.check_custom_policy.outputs.exists == 'true'
+        working-directory: infra
+        env:
+          CUSTOM_POLICY_NAME: lambda-sqs-policy
+        run: |
+          POLICY_ARN=$(aws iam list-attached-role-policies \
+          --role-name "$IAM_ROLE_NAME" \
+          --query "AttachedPolicies[?PolicyName=='${CUSTOM_POLICY_NAME}'].PolicyArn" \
+          --output text)
+          
+          if [ -n "$POLICY_ARN" ] && [ "$POLICY_ARN" != "None" ]; then
+          echo "Policy custom está anexada, importando attachment..."
+          terraform import aws_iam_role_policy_attachment.lambda_sqs_attach ${IAM_ROLE_NAME}/${POLICY_ARN}
+          else
+          echo "Policy custom existe mas não está anexada, pulando import"
+          fi
+
+
+      # Step 1 - Verificar se a policy existe
+      - name: Verificar se a policy basic exec existe
+        id: check_policy
         working-directory: infra
         run: |
           POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-          ATTACHED=$(aws iam list-attached-role-policies --role-name "$IAM_ROLE_NAME" \
-            --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" --output text)
-          if [ -n "$ATTACHED" ]; then
-            echo "Importando attachment basic exec..."
-            terraform import aws_iam_role_policy_attachment.lambda_basic_exec ${IAM_ROLE_NAME}/${POLICY_ARN}
+          
+          if aws iam get-policy --policy-arn "$POLICY_ARN" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Policy basic exec existe"
           else
-            echo "Policy basic exec não anexada, pulando import"
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Policy basic exec não existe"
           fi
 
-      # Importar policy attachment VPC access (se existir)
-      - name: Importar policy attachment VPC access (se existir)
+      # Step 2 - Importar attachment (somente se policy existir)
+      - name: Importar policy attachment basic exec (se estiver anexada)
+        if: steps.check_policy.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+          
+          ATTACHED=$(aws iam list-attached-role-policies \
+          --role-name "$IAM_ROLE_NAME" \
+          --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" \
+          --output text)
+          
+          if [ -n "$ATTACHED" ]; then
+          echo "Policy está anexada, importando attachment..."
+          terraform import aws_iam_role_policy_attachment.lambda_basic_exec ${IAM_ROLE_NAME}/${POLICY_ARN}
+          else
+          echo "Policy existe mas não está anexada, pulando import"
+          fi
+    
+
+      # Step 1 - Verificar se a policy VPC access existe
+      - name: Verificar se a policy VPC access existe
+        id: check_vpc_policy
         working-directory: infra
         run: |
           POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-          ATTACHED=$(aws iam list-attached-role-policies --role-name "$IAM_ROLE_NAME" \
-            --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" --output text)
-          if [ -n "$ATTACHED" ]; then
-            echo "Importando attachment VPC access..."
-            terraform import aws_iam_role_policy_attachment.lambda_vpc_access ${IAM_ROLE_NAME}/${POLICY_ARN}
+          
+          if aws iam get-policy --policy-arn "$POLICY_ARN" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Policy VPC access existe"
           else
-            echo "Policy VPC access não anexada, pulando import"
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Policy VPC access não existe"
           fi
 
-      # Importar policy attachment custom SQS (se existir) — sem usar terraform output
-      - name: Importar policy attachment custom SQS (se existir)
+      # Step 2 - Importar attachment VPC access (somente se policy existir)
+      - name: Importar policy attachment VPC access (se estiver anexada)
+        if: steps.check_vpc_policy.outputs.exists == 'true'
         working-directory: infra
         run: |
-          # Nome da policy customizada criada no Terraform (ajuste se for diferente)
-          CUSTOM_POLICY_NAME="lambda-sqs-policy"
+          POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
           
-          # Descobre o ARN da policy customizada anexada à role pelo nome
-          POLICY_ARN=$(aws iam list-attached-role-policies --role-name "$IAM_ROLE_NAME" \
-          --query "AttachedPolicies[?PolicyName=='${CUSTOM_POLICY_NAME}'].PolicyArn" --output text)
+          ATTACHED=$(aws iam list-attached-role-policies \
+          --role-name "$IAM_ROLE_NAME" \
+          --query "AttachedPolicies[?PolicyArn=='$POLICY_ARN'].PolicyArn" \
+          --output text)
           
-          if [ -n "$POLICY_ARN" ] && [ "$POLICY_ARN" != "None" ]; then
-          echo "Importando attachment custom SQS (${CUSTOM_POLICY_NAME})..."
-          terraform import aws_iam_role_policy_attachment.lambda_sqs_attach ${IAM_ROLE_NAME}/${POLICY_ARN}
+          if [ -n "$ATTACHED" ]; then
+          echo "Policy VPC access está anexada, importando attachment..."
+          terraform import aws_iam_role_policy_attachment.lambda_vpc_access ${IAM_ROLE_NAME}/${POLICY_ARN}
           else
-          echo "Policy custom SQS (${CUSTOM_POLICY_NAME}) não anexada, pulando import"
+          echo "Policy VPC access existe mas não está anexada, pulando import"
           fi
+
+
+
 
       #Verificar existencia de VPC e importar
 
