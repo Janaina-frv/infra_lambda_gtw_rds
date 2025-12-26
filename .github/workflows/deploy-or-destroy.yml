@@ -310,6 +310,38 @@ jobs:
           echo "Importando Security Group do Endpoint SQS: ${SQS_ENDPOINT_SG_ID}"
           terraform import aws_security_group.endpoint_sg ${SQS_ENDPOINT_SG_ID}
 
+      # Step 1 - Verificar existência do VPC Endpoint SQS
+      - name: Verificar existência do VPC Endpoint SQS
+        id: check_sqs_endpoint
+        run: |
+          VPC_ID="${{ secrets.VPC_ID }}"  # ou outro método de obter o VPC ID
+          echo "Verificando existência do Endpoint SQS na VPC $VPC_ID..."
+          
+          # Buscar Endpoint Interface SQS na VPC
+          ENDPOINT_ID=$(aws ec2 describe-vpc-endpoints \
+            --filters "Name=vpc-id,Values=$VPC_ID" "Name=service-name,Values=com.amazonaws.${{ vars.region }}.sqs" \
+            --query "VpcEndpoints[?VpcEndpointType=='Interface'].VpcEndpointId | [0]" \
+            --output text)
+          
+          if [ -n "$ENDPOINT_ID" ] && [ "$ENDPOINT_ID" != "None" ]; then
+            echo "✅ Endpoint SQS encontrado: $ENDPOINT_ID"
+            echo "endpoint_exists=true" >> $GITHUB_OUTPUT
+            echo "endpoint_id=$ENDPOINT_ID" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Endpoint SQS não encontrado"
+            echo "endpoint_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Step 2 - Importar VPC Endpoint SQS no Terraform
+      - name: Importar VPC Endpoint SQS
+        if: steps.check_sqs_endpoint.outputs.endpoint_exists == 'true'
+        working-directory: infra
+        run: |
+          ENDPOINT_ID="${{ steps.check_sqs_endpoint.outputs.endpoint_id }}"
+          echo "Importando Endpoint SQS no Terraform..."
+          terraform import aws_vpc_endpoint.sqs "$ENDPOINT_ID" || echo "Endpoint já importado ou não existe"
+
+
       #Verificar existencia de Security Group do RDS e importar
 
       - name: Verificar e Obter Security Group do RDS
@@ -518,6 +550,13 @@ jobs:
           echo "Destruindo policy customizada lambda-sqs-policy..."
           terraform destroy -target=aws_iam_policy.lambda_sqs_policy -auto-approve
 
+      - name: DESTROY - Lambda
+        if: env.TF_ACTION == 'destroy' && steps.lambda_check.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          echo "Destruindo Lambda..."
+          terraform destroy -target=aws_lambda_function.${LAMBDA_RESOURCE_NAME} -auto-approve
+      
 
       - name: DESTROY - API Gateway (completo)
         if: env.TF_ACTION == 'destroy' && steps.get_api.outputs.exists == 'true'
@@ -526,32 +565,23 @@ jobs:
           echo "Destruindo API..."
           terraform destroy -target=aws_apigatewayv2_api.${API_RESOURCE_NAME} -auto-approve
 
-
-      - name: DESTROY - Lambda
-        if: env.TF_ACTION == 'destroy' && steps.lambda_check.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          echo "Destruindo Lambda..."
-          terraform destroy -target=aws_lambda_function.${LAMBDA_RESOURCE_NAME} -auto-approve
-    
-
       - name: DESTROY - RDS Instance
         if: env.TF_ACTION == 'destroy' && steps.get_rds.outputs.exists == 'true'
         working-directory: infra
         run: |
           terraform destroy -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} -auto-approve
 
-      - name: DESTROY - Endpoint SQS
-        if: env.TF_ACTION == 'destroy' && steps.check_sqs_endpoint_sg.outputs.exists == 'true'
-        working-directory: infra
-        run: |
-          terraform destroy -target=aws_vpc_endpoint.sqs -auto-approve
-
       - name: DESTROY - DB Subnet Group
         if: env.TF_ACTION == 'destroy' && steps.get_db_subnet_group.outputs.exists == 'true'
         working-directory: infra
         run: |
           terraform destroy -target=aws_db_subnet_group.this_subnet_group -auto-approve
+
+      - name: DESTROY - Endpoint SQS
+        if: env.TF_ACTION == 'destroy' && steps.check_sqs_endpoint_sg.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy -target=aws_vpc_endpoint.sqs -auto-approve
 
       - name: DESTROY - Security Group do Endpoint SQS
         if: env.TF_ACTION == 'destroy' && steps.check_sqs_endpoint_sg.outputs.exists == 'true'
