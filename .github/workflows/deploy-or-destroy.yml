@@ -77,7 +77,30 @@ jobs:
         run: |
           echo "Importando IAM Role para o Terraform state..."
           terraform import aws_iam_role.lambda_exec_role $IAM_ROLE_NAME
-    
+
+      # Importar Policy  Custom
+      - name: Importar Policy Custom
+        id: get_policy_custom
+        working-directory: infra
+        env:
+          CUSTOM_POLICY_NAME: lambda-sqs-policy
+        run: |
+          echo "Verificando existência da policy '${CUSTOM_POLICY_NAME}'..."
+          POLICY_ARN=$(aws iam list-policies \
+          --scope Local \
+          --query "Policies[?PolicyName=='${CUSTOM_POLICY_NAME}'].Arn | [0]" \
+          --output text)
+          echo "exists=true" >> $GITHUB_OUTPUT
+          
+          if [ -n "$POLICY_ARN" ] && [ "$POLICY_ARN" != "None" ]; then
+          echo "Policy já existe: ${POLICY_ARN}. Importando para o Terraform state..."
+          terraform import aws_iam_policy.lambda_sqs_policy "${POLICY_ARN}" || true
+          else
+          echo "Policy não existe. "
+          echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+          
+
       # Importar policy attachment basic exec (se existir)
       - name: Importar policy attachment basic exec (se existir)
         working-directory: infra
@@ -397,7 +420,7 @@ jobs:
 
       # CREATE - IAM Policy customizada
       - name: CREATE - Custom IAM Policy
-        if: env.TF_ACTION == 'apply'
+        if: env.TF_ACTION == 'apply' && steps.get_policy_custom.outputs.exists == 'false'
         working-directory: infra
         run: |
           echo "Criando policy customizada lambda-sqs-policy..."
