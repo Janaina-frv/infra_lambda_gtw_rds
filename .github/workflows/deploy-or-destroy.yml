@@ -73,15 +73,13 @@ jobs:
 
       # Importar IAM Role
       - name: Importar IAM Role se existir
-        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
           echo "Importando IAM Role para o Terraform state..."
           terraform import aws_iam_role.lambda_exec_role $IAM_ROLE_NAME
     
-          # Importar policy attachment basic exec (se existir)
+      # Importar policy attachment basic exec (se existir)
       - name: Importar policy attachment basic exec (se existir)
-        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
           POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
@@ -96,7 +94,6 @@ jobs:
 
       # Importar policy attachment VPC access (se existir)
       - name: Importar policy attachment VPC access (se existir)
-        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
           POLICY_ARN="arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
@@ -111,7 +108,6 @@ jobs:
 
       # Importar policy attachment custom SQS (se existir) — sem usar terraform output
       - name: Importar policy attachment custom SQS (se existir)
-        if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
           # Nome da policy customizada criada no Terraform (ajuste se for diferente)
@@ -399,16 +395,33 @@ jobs:
             -target=aws_db_instance.${RDS_DB_RESOURCE_NAME} \
             -auto-approve
 
-      - name: APPLY - IAM Role e policies
-        if: env.TF_ACTION == 'apply' && steps.get_iam_role.outputs.exists == 'false'
+      # CREATE - IAM Policy customizada
+      - name: CREATE - Custom IAM Policy
+        if: env.TF_ACTION == 'apply'
+        working-directory: infra
+        run: |
+          echo "Criando policy customizada lambda-sqs-policy..."
+          terraform apply -target=aws_iam_policy.lambda_sqs_policy -auto-approve
+
+      # CREATE - IAM Role
+      - name: CREATE - IAM Role
+        if: env.TF_ACTION == 'apply'
+        working-directory: infra
+        run: |
+          echo "Criando IAM Role..."
+          terraform apply -target=aws_iam_role.lambda_exec_role -auto-approve
+
+      # CREATE - IAM policy attachments
+      - name: CREATE - IAM policy attachments
+        if: env.TF_ACTION == 'apply'
         working-directory: infra
         run: |
           terraform apply \
-            -target=aws_iam_role.lambda_exec_role \
             -target=aws_iam_role_policy_attachment.lambda_basic_exec \
             -target=aws_iam_role_policy_attachment.lambda_vpc_access \
             -target=aws_iam_role_policy_attachment.lambda_sqs_attach \
             -auto-approve
+
 
       - name: Instalar Java e compilar (modo apply)
         if: env.TF_ACTION == 'apply'
@@ -468,6 +481,7 @@ jobs:
 
       #Destruição das infras na ordem correta
 
+      # Destroy attachments
       - name: DESTROY - IAM policy attachments
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
@@ -477,15 +491,23 @@ jobs:
             -target=aws_iam_role_policy_attachment.lambda_vpc_access \
             -target=aws_iam_role_policy_attachment.lambda_sqs_attach \
             -auto-approve
-  
 
+      # Destroy IAM Role
       - name: DESTROY - IAM Role
         if: env.TF_ACTION == 'destroy' && steps.get_iam_role.outputs.exists == 'true'
         working-directory: infra
         run: |
           echo "Destruindo IAM Role..."
           terraform destroy -target=aws_iam_role.lambda_exec_role -auto-approve
-    
+
+      # Destroy custom IAM Policy
+      - name: DESTROY - Custom IAM Policy
+        if: env.TF_ACTION == 'destroy'
+        working-directory: infra
+        run: |
+          echo "Destruindo policy customizada lambda-sqs-policy..."
+          terraform destroy -target=aws_iam_policy.lambda_sqs_policy -auto-approve
+
 
       - name: DESTROY - API Gateway (completo)
         if: env.TF_ACTION == 'destroy' && steps.get_api.outputs.exists == 'true'
