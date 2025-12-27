@@ -313,9 +313,6 @@ jobs:
       - name: Verificar existência do VPC Endpoint SQS
         id: check_sqs_endpoint
         run: |
-          VPC_ID="${{ secrets.VPC_ID }}"  # ou outputs de step anterior
-          REGION="${{ vars.region }}"
-          
           if [ -z "$VPC_ID" ]; then
             echo "⚠️ VPC_ID não definido, pulando verificação"
             echo "endpoint_exists=false" >> $GITHUB_OUTPUT
@@ -325,7 +322,7 @@ jobs:
           echo "Verificando existência do Endpoint SQS na VPC $VPC_ID..."
           
           ENDPOINT_ID=$(aws ec2 describe-vpc-endpoints \
-            --filters "Name=vpc-id,Values=$VPC_ID" "Name=service-name,Values=com.amazonaws.${REGION}.sqs" \
+            --filters "Name=vpc-id,Values=$VPC_ID" "Name=service-name,Values=com.amazonaws.${AWS_REGION}.sqs" \
             --query "VpcEndpoints[?VpcEndpointType=='Interface'].VpcEndpointId | [0]" \
             --output text)
           
