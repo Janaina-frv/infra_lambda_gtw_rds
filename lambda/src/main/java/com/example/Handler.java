@@ -17,20 +17,19 @@ import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageResult;
 
-
 public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
 
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final String SQS_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/757367947438/feedback_urgente-sqs";
     private final AmazonSQS sqsClient = AmazonSQSClientBuilder.standard().withRegion("us-east-1").build();
 
-
     private void criarTabelaSeNaoExistir(Connection conn) throws SQLException {
         String sql = """
             CREATE TABLE IF NOT EXISTS items (
                 id SERIAL PRIMARY KEY,
                 descricao VARCHAR(255) NOT NULL,
-                nota DOUBLE PRECISION NOT NULL
+                nota DOUBLE PRECISION NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW()
             )
             """;
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -40,7 +39,6 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
 
     @Override
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent event, Context context) {
-
         try {
             context.getLogger().log("Evento recebido: " + event);
             context.getLogger().log("Body recebido: " + event.getBody());
@@ -85,6 +83,7 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
         try (Connection conn = DriverManager.getConnection(url, user, pass)) {
             criarTabelaSeNaoExistir(conn);
 
+            // Inserção incluindo created_at automaticamente
             String sqlInsert = "INSERT INTO items (descricao, nota) VALUES (?, ?)";
             try (PreparedStatement stmt = conn.prepareStatement(sqlInsert)) {
                 stmt.setString(1, item.getDescricao());
@@ -96,7 +95,7 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
 
             // Envia para SQS se a nota for menor que 5
             if (item.getNota() < 5.00) {
-                context.getLogger().log("Nota esta abaixo de 5, enviando mensagem urgente");
+                context.getLogger().log("Nota está abaixo de 5, enviando mensagem urgente");
                 try {
                     SendMessageRequest sendMsgRequest = new SendMessageRequest()
                             .withQueueUrl(SQS_QUEUE_URL)
@@ -111,9 +110,7 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
                         context.getLogger().log(s.toString());
                     }
                 }
-
             }
         }
     }
-
 }
