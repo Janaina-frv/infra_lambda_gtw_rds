@@ -20,5 +20,4 @@ public class ItemRequest {
         this.nota = nota;
     }
 
-    publc
 }
