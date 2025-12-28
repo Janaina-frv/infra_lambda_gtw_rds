@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: apply  # apply | destroy
+      TF_ACTION: destroy  # apply | destroy
       AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
       LAMBDA_FUNCTION_NAME: items-api-lambda
@@ -345,6 +345,41 @@ jobs:
           echo "Importando Endpoint SQS no Terraform..."
           terraform import aws_vpc_endpoint.sqs "$ENDPOINT_ID" || echo "Endpoint já importado ou não existe"
 
+      # Verficar VPC Endpoint SNS no Terraform
+      - name: Verificar existência do VPC Endpoint SNS
+        id: check_sns_endpoint
+        run: |
+          if [ -z "$VPC_ID" ]; then
+            echo "⚠️ VPC_ID não definido, pulando verificação"
+            echo "endpoint_exists=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "Verificando existência do Endpoint SNS na VPC $VPC_ID..."
+          
+          ENDPOINT_ID=$(aws ec2 describe-vpc-endpoints \
+            --filters "Name=vpc-id,Values=$VPC_ID" "Name=service-name,Values=com.amazonaws.${AWS_REGION}.sns" \
+            --query "VpcEndpoints[?VpcEndpointType=='Interface'].VpcEndpointId | [0]" \
+            --output text)
+          
+          if [ -n "$ENDPOINT_ID" ] && [ "$ENDPOINT_ID" != "None" ]; then
+            echo "✅ Endpoint SNS encontrado: $ENDPOINT_ID"
+            echo "endpoint_exists=true" >> $GITHUB_OUTPUT
+            echo "endpoint_id=$ENDPOINT_ID" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Endpoint SNS não encontrado"
+            echo "endpoint_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+
+      # Importar VPC Endpoint SNS no Terraform
+      - name: Importar VPC Endpoint SNS
+        if: steps.check_sns_endpoint.outputs.endpoint_exists == 'true'
+        working-directory: infra
+        run: |
+          ENDPOINT_ID="${{ steps.check_sns_endpoint.outputs.endpoint_id }}"
+          echo "Importando Endpoint SNS no Terraform..."
+          terraform import aws_vpc_endpoint.sns "$ENDPOINT_ID" || echo "Endpoint já importado ou não existe"
 
       #Verificar existencia de Security Group do RDS e importar
 
@@ -430,6 +465,15 @@ jobs:
           echo "Criando Endpoint SQS..."
           terraform apply \
             -target=aws_vpc_endpoint.sqs \
+            -auto-approve
+
+      - name: APPLY - Endpoint SNS
+        if: env.TF_ACTION == 'apply' && steps.check_sns_endpoint_sg.outputs.exists == 'false'
+        working-directory: infra
+        run: |
+          echo "Criando Endpoint SNS..."
+          terraform apply \
+            -target=aws_vpc_endpoint.sns \
             -auto-approve
 
       - name: APPLY - RDS e Security Group
@@ -580,6 +624,12 @@ jobs:
         working-directory: infra
         run: |
           terraform destroy -target=aws_db_subnet_group.this_subnet_group -auto-approve
+
+      - name: DESTROY - Endpoint SNS
+        if: env.TF_ACTION == 'destroy' && steps.check_sns_endpoint_sg.outputs.exists == 'true'
+        working-directory: infra
+        run: |
+          terraform destroy -target=aws_vpc_endpoint.sns -auto-approve
 
       - name: DESTROY - Endpoint SQS
         if: env.TF_ACTION == 'destroy' && steps.check_sqs_endpoint_sg.outputs.exists == 'true'

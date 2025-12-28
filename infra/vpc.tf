@@ -71,3 +71,18 @@ resource "aws_vpc_endpoint" "sqs" {
 
   private_dns_enabled = true
 }
+
+
+#####################################
+# Endpoint Interface SNS
+#####################################
+
+resource "aws_vpc_endpoint" "sns" {
+  vpc_id             = aws_vpc.this_vpc.id
+  service_name       = "com.amazonaws.${var.region}.sns"
+  vpc_endpoint_type  = "Interface"
+  subnet_ids         = [aws_subnet.private_a.id, aws_subnet.private_b.id]
+  security_group_ids = [aws_security_group.lambda_sg.id]
+
+  private_dns_enabled = true
+}
