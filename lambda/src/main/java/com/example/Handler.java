@@ -29,7 +29,7 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
                 id SERIAL PRIMARY KEY,
                 descricao VARCHAR(255) NOT NULL,
                 nota DOUBLE PRECISION NOT NULL,
-                urgency VARCHAR(255) NOT NULL,
+                urgencia VARCHAR(255) NOT NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT NOW()
             )
             """;
@@ -85,11 +85,11 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
             criarTabelaSeNaoExistir(conn);
 
             // Inserção incluindo created_at automaticamente
-            String sqlInsert = "INSERT INTO items (descricao, nota) VALUES (?, ?)";
+            String sqlInsert = "INSERT INTO items (descricao, nota, urgencia) VALUES (?, ?, ?)";
             try (PreparedStatement stmt = conn.prepareStatement(sqlInsert)) {
                 stmt.setString(1, item.getDescricao());
                 stmt.setDouble(2, item.getNota());
-                stmt.setString(3, "ALTA");
+                stmt.setString(3, item.getUrgencia());
                 stmt.executeUpdate();
             }
 
