@@ -29,6 +29,7 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
                 id SERIAL PRIMARY KEY,
                 descricao VARCHAR(255) NOT NULL,
                 nota DOUBLE PRECISION NOT NULL,
+                urgency VARCHAR(255) NOT NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT NOW()
             )
             """;
@@ -88,6 +89,7 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
             try (PreparedStatement stmt = conn.prepareStatement(sqlInsert)) {
                 stmt.setString(1, item.getDescricao());
                 stmt.setDouble(2, item.getNota());
+                stmt.setString(3, "ALTA");
                 stmt.executeUpdate();
             }
 

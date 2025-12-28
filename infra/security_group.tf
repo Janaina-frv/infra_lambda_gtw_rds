@@ -80,3 +80,31 @@ resource "aws_security_group" "endpoint_sg" {
     Project     = "app"
   }
 }
+
+resource "aws_security_group" "endpoint_SNS_sg" {
+  name   = "sns-endpoint-sg"
+  vpc_id = aws_vpc.this_vpc.id
+
+  # regra de ingress: permite tráfego HTTPS vindo do SG da Lambda
+  ingress {
+    from_port                = 443
+    to_port                  = 443
+    protocol                 = "tcp"
+    security_groups          = [aws_security_group.lambda_sg.id]
+    description              = "Permitir HTTPS da Lambda"
+  }
+
+  # regra de egress: libera saída
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "sns-endpoint-sg"
+    Environment = var.environment
+    Project     = "app"
+  }
+}
