@@ -82,7 +82,7 @@ resource "aws_vpc_endpoint" "sns" {
   service_name       = "com.amazonaws.${var.region}.sns"
   vpc_endpoint_type  = "Interface"
   subnet_ids         = [aws_subnet.private_a.id, aws_subnet.private_b.id]
-  security_group_ids = [aws_security_group.lambda_sg.id]
+  security_group_ids = [aws_security_group.endpoint_SNS_sg.id]
 
   private_dns_enabled = true
 }

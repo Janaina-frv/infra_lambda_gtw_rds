@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: destroy  # apply | destroy
+      TF_ACTION: apply  # apply | destroy
       AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
       LAMBDA_FUNCTION_NAME: items-api-lambda
@@ -626,7 +626,7 @@ jobs:
           terraform destroy -target=aws_db_subnet_group.this_subnet_group -auto-approve
 
       - name: DESTROY - Endpoint SNS
-        if: env.TF_ACTION == 'destroy' && steps.check_sns_endpoint_sg.outputs.exists == 'true'
+        if: env.TF_ACTION == 'destroy' && steps.check_sns_endpoint.outputs.endpoint_exists == 'true'
         working-directory: infra
         run: |
           terraform destroy -target=aws_vpc_endpoint.sns -auto-approve
