@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: apply  # apply | destroy
+      TF_ACTION: destroy  # apply | destroy
       AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
       LAMBDA_FUNCTION_NAME: items-api-lambda
@@ -486,7 +486,7 @@ jobs:
             -auto-approve
 
       # CREATE - IAM Policy customizada
-      - name: CREATE - Custom IAM Policy
+      - name: APPLY - Custom IAM Policy
         if: env.TF_ACTION == 'apply' && steps.get_policy_custom.outputs.exists == 'false'
         working-directory: infra
         run: |
@@ -494,7 +494,7 @@ jobs:
           terraform apply -target=aws_iam_policy.lambda_sqs_policy -auto-approve
 
       # CREATE - IAM Role
-      - name: CREATE - IAM Role
+      - name: APPLY - IAM Role
         if: env.TF_ACTION == 'apply'
         working-directory: infra
         run: |
@@ -502,7 +502,7 @@ jobs:
           terraform apply -target=aws_iam_role.lambda_exec_role -auto-approve
 
       # CREATE - IAM policy attachments
-      - name: CREATE - IAM policy attachments
+      - name: APPLY - IAM policy attachments
         if: env.TF_ACTION == 'apply'
         working-directory: infra
         run: |
