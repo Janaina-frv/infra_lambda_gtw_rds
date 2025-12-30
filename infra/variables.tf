@@ -60,7 +60,7 @@ variable "lambda_runtime" {
 
 variable "lambda_handler" {
   description = "Handler da Lambda"
-  default     = "com.example.Handler::handleRequest"
+  default     = "br.feedback.AppLifeCycleBean::handleRequest"
 }
 
 variable "lambda_memory" {

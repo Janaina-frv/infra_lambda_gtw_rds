@@ -8,7 +8,7 @@ resource "aws_lambda_function" "items" {
 
   runtime = var.lambda_runtime
   filename = "${path.module}/build/lambda/feedback-1.0.0-SNAPSHOT.jar"
-  handler  = "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest"
+  handler  = var.lambda_handler
 
   memory_size = var.lambda_memory
   timeout     = var.lambda_timeout
