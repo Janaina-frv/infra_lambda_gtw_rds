@@ -39,7 +39,7 @@ public class FeedbackService {
 
         Urgencia urgencia = calcularUrgencia(nota);
 
-        if (urgencia == Urgencia.URGENTE) {
+        if (urgencia == Urgencia.ALTA) {
             FeedbackPayload payload = new FeedbackPayload(feedback.getDescricao(), feedback.getNota(), urgencia);
             String json = mapper.writeValueAsString(payload);
             emitter.send(json);
@@ -49,9 +49,9 @@ public class FeedbackService {
     }
 
     private Urgencia calcularUrgencia(Double nota) {
-        if (nota >= 8.0) return Urgencia.NAO_URGENTE;
-        if (nota >= 5.0) return Urgencia.MEDIO;
-        return Urgencia.URGENTE;
+        if (nota >= 8.0) return Urgencia.BAIXA;
+        if (nota >= 5.0) return Urgencia.MEDIA;
+        return Urgencia.ALTA;
     }
 
     @Transactional
