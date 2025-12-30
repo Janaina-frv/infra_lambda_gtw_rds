@@ -527,7 +527,7 @@ jobs:
         if: env.TF_ACTION == 'apply'
         run: |
           mkdir -p infra/build/lambda
-          cp lambda/target/function.zip infra/build/lambda/function.zip
+          cp lambda/target/feedback-1.0.0-SNAPSHOT.jar infra/build/lambda/feedback-1.0.0-SNAPSHOT.jar
 
       - name: APPLY - Executar da Lambda
         if: env.TF_ACTION == 'apply' && steps.lambda_check.outputs.exists == 'false'
