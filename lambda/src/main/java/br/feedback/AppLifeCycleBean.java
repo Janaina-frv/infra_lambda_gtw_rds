@@ -4,18 +4,15 @@ import io.quarkus.runtime.Startup;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jboss.logging.Logger;
 
 @Startup
 @ApplicationScoped
 public class AppLifeCycleBean {
 
-    private static final Logger LOG =
-            LoggerFactory.getLogger(AppLifeCycleBean.class);
+    private static final Logger LOG = Logger.getLogger(AppLifeCycleBean.class);
 
     void onStart(@Observes StartupEvent ev) {
-        // Código executado na inicialização da aplicação
-        System.out.println("Aplicação iniciada.");
+        LOG.info("Aplicação iniciada");
     }
 }
