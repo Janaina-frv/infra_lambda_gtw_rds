@@ -7,8 +7,9 @@ resource "aws_lambda_function" "items" {
   role          = aws_iam_role.lambda_exec_role.arn
 
   runtime = var.lambda_runtime
-  filename = "${path.module}/build/lambda/function.zip"
-  handler  = "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest"
+  handler = var.lambda_handler
+
+  filename      = "${path.module}/build/lambda/lambda.jar"
 
   memory_size = var.lambda_memory
   timeout     = var.lambda_timeout
