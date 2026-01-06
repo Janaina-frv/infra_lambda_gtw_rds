@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: destroy  # apply | destroy
+      TF_ACTION: apply  # apply | destroy
       AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
       LAMBDA_FUNCTION_NAME: items-api-lambda
@@ -530,7 +530,7 @@ jobs:
         if: env.TF_ACTION == 'apply'
         run: |
           mkdir -p infra/build/lambda
-          cp lambda/target/ms-notification.jar infra/build/lambda/ms-notification.jar
+          cp lambda/target/feedback-1.0.0-SNAPSHOT.jar infra/build/lambda/feedback-1.0.0-SNAPSHOT.jar
 
       # APPLY - Executar da Lambda
       - name: APPLY - Executar da Lambda

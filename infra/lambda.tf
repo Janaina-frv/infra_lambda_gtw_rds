@@ -9,7 +9,7 @@ resource "aws_lambda_function" "items" {
   runtime = var.lambda_runtime
   handler  = "br.com.lambda.NotificationLambda::handleRequest"
 
-  filename      = "${path.module}/build/lambda/ms-notification.jar"
+  filename      = "${path.module}/build/lambda/feedback-1.0.0-SNAPSHOT.jar"
 
   memory_size = var.lambda_memory
   timeout     = var.lambda_timeout
