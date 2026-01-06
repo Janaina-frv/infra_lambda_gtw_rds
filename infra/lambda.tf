@@ -7,9 +7,9 @@ resource "aws_lambda_function" "items" {
   role          = aws_iam_role.lambda_exec_role.arn
 
   runtime = var.lambda_runtime
-  handler  = "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest"
+  handler  = "br.com.lambda.NotificationLambda::handleRequest"
 
-  filename      = "${path.module}/build/lambda/function.zip"
+  filename      = "${path.module}/build/lambda/ms-notification.jar"
 
   memory_size = var.lambda_memory
   timeout     = var.lambda_timeout
