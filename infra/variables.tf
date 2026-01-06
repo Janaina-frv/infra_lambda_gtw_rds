@@ -58,11 +58,6 @@ variable "lambda_runtime" {
   default     = "java17"
 }
 
-variable "lambda_handler" {
-  description = "Handler da Lambda"
-  default     = "com.example.Handler::handleRequest"
-}
-
 variable "lambda_memory" {
   description = "Memória da Lambda em MB"
   default     = 512
