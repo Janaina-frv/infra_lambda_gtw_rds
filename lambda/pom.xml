@@ -85,6 +85,12 @@
             <artifactId>quarkus-jdbc-postgresql</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-amazon-lambda-http</artifactId>
+        </dependency>
+
+
     </dependencies>
 
     <build>
