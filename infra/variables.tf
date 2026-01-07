@@ -23,7 +23,7 @@ variable "db_username" {
 
 variable "db_password" {
   type        = string
-  default     = "12345"
+  default     = "dbadmin1234"
   description = "Senha do banco"
   sensitive   = true
 }
