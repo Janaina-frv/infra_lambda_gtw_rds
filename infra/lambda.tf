@@ -31,7 +31,6 @@ resource "aws_lambda_function" "items" {
   }
 
   depends_on = [
-    var.use_existing_sgs ? null : aws_security_group.lambda_sg,
     aws_db_instance.items_db
   ]
 

@@ -29,7 +29,6 @@ resource "aws_db_instance" "items_db" {
   }
 
   depends_on = [
-    aws_db_subnet_group.this_subnet_group,
-    var.use_existing_sgs ? null : aws_security_group.rds_sg
+    aws_db_subnet_group.this_subnet_group
   ]
 }

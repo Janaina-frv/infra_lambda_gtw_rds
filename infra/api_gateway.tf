@@ -26,7 +26,6 @@ resource "aws_apigatewayv2_stage" "default" {
   auto_deploy = true
 
   depends_on = [
-    aws_apigatewayv2_route.health,
     aws_apigatewayv2_route.post_items
   ]
 }
