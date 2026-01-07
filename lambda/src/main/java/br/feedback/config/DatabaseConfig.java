@@ -1,13 +1,23 @@
 package br.feedback.config;
 
+import io.agroal.api.AgroalDataSource;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import io.quarkus.runtime.Startup;
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
+@ApplicationScoped
 public class DatabaseConfig {
-    
-    public static void createTableIfNotExists(DataSource dataSource) {
+
+    @Inject
+    AgroalDataSource dataSource;
+
+    @PostConstruct
+    void createTableIfNotExists() {
         String sql = """
             CREATE TABLE IF NOT EXISTS feedback_entity (
                 id UUID PRIMARY KEY,
@@ -17,7 +27,7 @@ public class DatabaseConfig {
                 urgencia VARCHAR(20) NOT NULL
             )
             """;
-            
+
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
@@ -26,3 +36,4 @@ public class DatabaseConfig {
         }
     }
 }
+

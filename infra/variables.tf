@@ -11,19 +11,19 @@ variable "api_name" {
 
 variable "db_name" {
   type        = string
-  default     = "itemsdb"
+  default     = "feedback"
   description = "Nome do banco de dados"
 }
 
 variable "db_username" {
   type        = string
-  default     = "dbadmin"
+  default     = "postgres"
   description = "Usuário do banco"
 }
 
 variable "db_password" {
   type        = string
-  default     = "dbadmin1234"
+  default     = "12345"
   description = "Senha do banco"
   sensitive   = true
 }
