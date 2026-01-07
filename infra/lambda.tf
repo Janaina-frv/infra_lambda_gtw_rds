@@ -7,9 +7,9 @@ resource "aws_lambda_function" "items" {
   role          = aws_iam_role.lambda_exec_role.arn
 
   runtime = var.lambda_runtime
-  handler  = "br.com.lambda.NotificationLambda::handleRequest"
+  handler  = "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest"
 
-  filename      = "${path.module}/build/lambda/feedback-1.0.0-SNAPSHOT.jar"
+  filename      = "${path.module}/build/lambda/function.zip"
 
   memory_size = var.lambda_memory
   timeout     = var.lambda_timeout
@@ -25,6 +25,7 @@ resource "aws_lambda_function" "items" {
       DB_NAME = var.db_name
       DB_USER = var.db_username
       DB_PASS = var.db_password
+      SQS_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/757367947438/feedback_urgente-sqs"
     }
   }
 

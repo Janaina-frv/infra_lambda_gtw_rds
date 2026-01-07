@@ -22,7 +22,7 @@ resource "aws_apigatewayv2_route" "health" {
 
 resource "aws_apigatewayv2_route" "post_items" {
   api_id    = aws_apigatewayv2_api.http_api.id
-  route_key = "POST /items"
+  route_key = "POST /feedbacks"
   target    = "integrations/${aws_apigatewayv2_integration.items_lambda.id}"
 }
 
