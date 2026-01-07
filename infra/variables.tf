@@ -11,13 +11,13 @@ variable "api_name" {
 
 variable "db_name" {
   type        = string
-  default     = "feedback"
+  default     = "itemsdb"
   description = "Nome do banco de dados"
 }
 
 variable "db_username" {
   type        = string
-  default     = "postgres"
+  default     = "dbadmin"
   description = "Usuário do banco"
 }
 
