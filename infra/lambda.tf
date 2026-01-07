@@ -25,6 +25,7 @@ resource "aws_lambda_function" "items" {
       DB_NAME = var.db_name
       DB_USER = var.db_username
       DB_PASS = var.db_password
+      DB_JDBC_URL = "jdbc:postgresql://${aws_db_instance.items_db.address}:5432/${var.db_name}"
       SQS_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/757367947438/feedback_urgente-sqs"
     }
   }
