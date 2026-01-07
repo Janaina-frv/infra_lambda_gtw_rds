@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ACTION: destroy  # apply | destroy
+      TF_ACTION: apply  # apply | destroy
       AWS_REGION: us-east-1
       LAMBDA_RESOURCE_NAME: items
       LAMBDA_FUNCTION_NAME: items-api-lambda
@@ -155,7 +155,7 @@ jobs:
 
       # Importar VPC para o state
       - name: Importar VPC para o state (se necessário)
-        if: env.TF_ACTION == 'destroy' && steps.get_vpc.outputs.exists == 'true'
+        if: steps.get_vpc.outputs.exists == 'true'
         working-directory: infra
         run: |
           if terraform state show aws_vpc.${VPC_RESOURCE_NAME} >/dev/null 2>&1; then
@@ -167,7 +167,7 @@ jobs:
 
       # Verificar existencia de Subnets e importar
       - name: Importar Subnets privadas se existirem
-        if: env.TF_ACTION == 'destroy' && steps.get_vpc.outputs.exists == 'true'
+        if: steps.get_vpc.outputs.exists == 'true'
         working-directory: infra
         run: |
           # Subnet private_a
@@ -557,7 +557,6 @@ jobs:
           
           echo "Criando rotas..."
           terraform apply \
-            -target=aws_apigatewayv2_route.health \
             -target=aws_apigatewayv2_route.post_items \
             -auto-approve
           
