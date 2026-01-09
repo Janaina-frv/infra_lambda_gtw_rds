@@ -3,8 +3,6 @@
 #####################################
 
 resource "aws_vpc" "this_vpc" {
-  count = var.use_existing_vpc ? 0 : 1
-
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
@@ -20,9 +18,7 @@ resource "aws_vpc" "this_vpc" {
 #####################################
 
 resource "aws_subnet" "private_a" {
-  count = var.use_existing_vpc ? 0 : 1
-
-  vpc_id            = local.vpc_id
+  vpc_id            = aws_vpc.this_vpc.id
   cidr_block        = var.subnet_a_cidr
   availability_zone = "${var.region}a"
 
@@ -33,9 +29,7 @@ resource "aws_subnet" "private_a" {
 }
 
 resource "aws_subnet" "private_b" {
-  count = var.use_existing_vpc ? 0 : 1
-
-  vpc_id            = local.vpc_id
+  vpc_id            = aws_vpc.this_vpc.id
   cidr_block        = var.subnet_b_cidr
   availability_zone = "${var.region}b"
 
@@ -51,13 +45,17 @@ resource "aws_subnet" "private_b" {
 
 resource "aws_db_subnet_group" "this_subnet_group" {
   name       = "app-db-subnet-group"
-  subnet_ids = local.subnet_ids
+  subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
 
   tags = {
     Name        = "app-db-subnet-group"
     Project     = "app"
   }
 
+  depends_on = [
+    aws_subnet.private_a,
+    aws_subnet.private_b
+  ]
 }
 
 #####################################
@@ -65,11 +63,11 @@ resource "aws_db_subnet_group" "this_subnet_group" {
 #####################################
 
 resource "aws_vpc_endpoint" "sqs" {
-  vpc_id             = local.vpc_id
+  vpc_id             = aws_vpc.this_vpc.id
   service_name       = "com.amazonaws.${var.region}.sqs"
   vpc_endpoint_type  = "Interface"
-  subnet_ids         = local.subnet_ids
-  security_group_ids = [local.endpoint_sqs_sg_id]
+  subnet_ids         = [aws_subnet.private_a.id, aws_subnet.private_b.id]
+  security_group_ids = [aws_security_group.endpoint_sg.id]
 
   private_dns_enabled = true
 }
@@ -80,11 +78,11 @@ resource "aws_vpc_endpoint" "sqs" {
 #####################################
 
 resource "aws_vpc_endpoint" "sns" {
-  vpc_id             = local.vpc_id
+  vpc_id             = aws_vpc.this_vpc.id
   service_name       = "com.amazonaws.${var.region}.sns"
   vpc_endpoint_type  = "Interface"
-  subnet_ids         = local.subnet_ids
-  security_group_ids = [local.endpoint_sns_sg_id]
+  subnet_ids         = [aws_subnet.private_a.id, aws_subnet.private_b.id]
+  security_group_ids = [aws_security_group.endpoint_SNS_sg.id]
 
   private_dns_enabled = true
 }

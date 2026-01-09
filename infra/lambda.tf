@@ -15,8 +15,8 @@ resource "aws_lambda_function" "items" {
   timeout     = var.lambda_timeout
 
   vpc_config {
-    subnet_ids         = local.subnet_ids
-    security_group_ids = [local.lambda_sg_id]
+    subnet_ids         = [aws_subnet.private_a.id, aws_subnet.private_b.id]
+    security_group_ids = [aws_security_group.lambda_sg.id]
   }
 
   environment {
@@ -31,6 +31,7 @@ resource "aws_lambda_function" "items" {
   }
 
   depends_on = [
+    aws_security_group.lambda_sg,
     aws_db_instance.items_db
   ]
 

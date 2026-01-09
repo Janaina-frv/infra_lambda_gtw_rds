@@ -3,10 +3,8 @@
 #####################################
 
 resource "aws_security_group" "lambda_sg" {
-  count  = var.use_existing_sgs ? 0 : 1
-
   name   = "lambda-sg"
-  vpc_id = local.vpc_id
+  vpc_id = aws_vpc.this_vpc.id
 
   egress {
     from_port   = 0
@@ -27,16 +25,14 @@ resource "aws_security_group" "lambda_sg" {
 #####################################
 
 resource "aws_security_group" "rds_sg" {
-  count  = var.use_existing_sgs ? 0 : 1
-
   name   = "rds-sg"
-  vpc_id = local.vpc_id
+  vpc_id = aws_vpc.this_vpc.id
 
   ingress {
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
-    security_groups = [var.use_existing_sgs ? var.existing_lambda_sg_id : aws_security_group.lambda_sg[0].id]
+    security_groups = [aws_security_group.lambda_sg.id]
   }
 
   egress {
@@ -58,17 +54,15 @@ resource "aws_security_group" "rds_sg" {
 #####################################
 
 resource "aws_security_group" "endpoint_sg" {
-  count  = var.use_existing_sgs ? 0 : 1
-
   name   = "sqs-endpoint-sg"
-  vpc_id = local.vpc_id
+  vpc_id = aws_vpc.this_vpc.id
 
   # regra de ingress: permite tráfego HTTPS vindo do SG da Lambda
   ingress {
     from_port                = 443
     to_port                  = 443
     protocol                 = "tcp"
-    security_groups = [var.use_existing_sgs ? var.existing_lambda_sg_id : aws_security_group.lambda_sg[0].id]
+    security_groups = [aws_security_group.lambda_sg.id]
     description     = "Permitir HTTPS da Lambda"
   }
 
@@ -88,17 +82,15 @@ resource "aws_security_group" "endpoint_sg" {
 }
 
 resource "aws_security_group" "endpoint_SNS_sg" {
-  count  = var.use_existing_sgs ? 0 : 1
-
   name   = "sns-endpoint-sg"
-  vpc_id = local.vpc_id
+  vpc_id = aws_vpc.this_vpc.id
 
   # regra de ingress: permite tráfego HTTPS vindo do SG da Lambda
   ingress {
     from_port                = 443
     to_port                  = 443
     protocol                 = "tcp"
-    security_groups = [var.use_existing_sgs ? var.existing_lambda_sg_id : aws_security_group.lambda_sg[0].id]
+    security_groups = [aws_security_group.lambda_sg.id]
     description     = "Permitir HTTPS da Lambda"
   }
 

@@ -15,7 +15,7 @@ resource "aws_db_instance" "items_db" {
   password = var.db_password
 
   db_subnet_group_name   = aws_db_subnet_group.this_subnet_group.name
-  vpc_security_group_ids = [local.rds_sg_id]
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
 
   publicly_accessible = false
   skip_final_snapshot = true
@@ -29,6 +29,8 @@ resource "aws_db_instance" "items_db" {
   }
 
   depends_on = [
-    aws_db_subnet_group.this_subnet_group
+        aws_security_group.rds_sg,
+        aws_subnet.private_a,
+        aws_subnet.private_b
   ]
 }
