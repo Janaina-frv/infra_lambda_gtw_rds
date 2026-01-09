@@ -1,11 +1,11 @@
 output "vpc_id" {
   description = "ID da VPC"
-  value = aws_vpc.this_vpc[0].id
+  value = aws_vpc.this_vpc.id
 }
 
 output "subnet_ids" {
   description = "IDs das subnets privadas"
-  value = [aws_subnet.private_a[0].id, aws_subnet.private_b[0].id]
+  value = [aws_subnet.private_a.id, aws_subnet.private_b.id]
 }
 
 output "lambda_function_name" {
