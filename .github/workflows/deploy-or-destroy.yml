@@ -33,7 +33,7 @@ jobs:
       - name: Autenticar com AWS via OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::043391333434:role/GitHubOIDCRole
+          role-to-assume: arn:aws:iam::043391333434:role/Github-Actions-Terraform-Role
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Verificar modo de operação
