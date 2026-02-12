@@ -22,7 +22,7 @@ jobs:
       API_NAME: ms_medicamentos-http-api
       API_RESOURCE_NAME: http_api
       RDS_SG_RESOURCE_NAME: rds_sg
-      DB_INSTANCE_IDENTIFIER: ms_medicamentos-db
+      DB_INSTANCE_IDENTIFIER: ms-medicamentos-db
       RDS_DB_RESOURCE_NAME: ms_medicamentos_db
 
     steps:
