@@ -30,7 +30,7 @@ variable "db_password" {
 
 variable "db_instance_identifier" {
   description = "Identificador da instância RDS"
-  default     = "ms_medicamentos_db"
+  default     = "ms-medicamentos-db"
 }
 
 variable "db_instance_class" {
