@@ -13,7 +13,6 @@ resource "aws_lambda_function" "ms_medicamentos" {
 
   # JAR gerado pelo mvn clean package
   filename         = "${path.module}/../lambda/target/ms-medicamentos-0.0.1-SNAPSHOT.jar"
-  source_code_hash = filebase64sha256("${path.module}/../lambda/target/ms-medicamentos-0.0.1-SNAPSHOT.jar")
 
   memory_size = 1024
   timeout     = 30
