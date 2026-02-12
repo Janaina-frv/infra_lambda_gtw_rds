@@ -469,7 +469,7 @@ jobs:
 
       # APPLY - Endpoint SNS
       - name: APPLY - Endpoint SNS
-        if: env.TF_ACTION == 'apply'
+        if: env.TF_ACTION == 'apply' && steps.check_sns_endpoint.outputs.endpoint_exists == 'false'
         working-directory: infra
         run: |
           echo "Criando Endpoint SNS..."
