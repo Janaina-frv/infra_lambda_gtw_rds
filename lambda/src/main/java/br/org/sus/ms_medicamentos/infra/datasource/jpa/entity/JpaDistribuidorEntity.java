@@ -1,7 +1,7 @@
 package br.org.sus.ms_medicamentos.infra.datasource.jpa.entity;
 
 import br.org.sus.ms_medicamentos.domain.TipoDistribuidor;
-import jakarta.persistence.*;
+import javax.persistence.*;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -11,7 +11,7 @@ import java.util.UUID;
 public class JpaDistribuidorEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID uuid;
 
     @Column(nullable = false)

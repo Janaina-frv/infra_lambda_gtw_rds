@@ -1,6 +1,6 @@
 package br.org.sus.ms_medicamentos.infra.datasource.jpa.entity;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -13,7 +13,7 @@ import java.util.UUID;
 public class JpaMedicamentoDistribuidorEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID uuid;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

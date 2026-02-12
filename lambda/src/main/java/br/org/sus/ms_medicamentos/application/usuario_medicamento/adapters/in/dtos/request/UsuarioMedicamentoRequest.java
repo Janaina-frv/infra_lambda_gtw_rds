@@ -1,7 +1,7 @@
 package br.org.sus.ms_medicamentos.application.usuario_medicamento.adapters.in.dtos.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
+import javax.validation.constraints.NotNull;
 import java.util.UUID;
 
 public record UsuarioMedicamentoRequest(

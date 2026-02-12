@@ -3,7 +3,7 @@ package br.org.sus.ms_medicamentos.application.usuario_medicamento.adapters.in;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import br.org.sus.ms_medicamentos.application.usuario_medicamento.adapters.in.dtos.request.UsuarioMedicamentoRequest;
 import br.org.sus.ms_medicamentos.application.usuario_medicamento.adapters.in.dtos.response.UsuarioMedicamentoResponse;
 import br.org.sus.ms_medicamentos.application.usuario_medicamento.ports.in.CadastrarUsuarioMedicamentoPortIn;
