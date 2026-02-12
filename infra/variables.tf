@@ -30,7 +30,7 @@ variable "db_password" {
 
 variable "db_instance_identifier" {
   description = "Identificador da instância RDS"
-  default     = "ms_medicamentos-db"
+  default     = "ms_medicamentos_db"
 }
 
 variable "db_instance_class" {
@@ -51,21 +51,6 @@ variable "db_engine_version" {
 variable "lambda_function_name" {
   description = "Nome da função Lambda"
   default     = "ms_medicamentos-lambda"
-}
-
-variable "lambda_runtime" {
-  description = "Runtime da Lambda"
-  default     = "java17"
-}
-
-variable "lambda_memory" {
-  description = "Memória da Lambda em MB"
-  default     = 512
-}
-
-variable "lambda_timeout" {
-  description = "Timeout da Lambda em segundos"
-  default     = 10
 }
 
 variable "vpc_cidr" {
