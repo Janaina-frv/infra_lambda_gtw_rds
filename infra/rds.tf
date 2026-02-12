@@ -2,7 +2,7 @@
 # Instância RDS
 #####################################
 
-resource "aws_db_instance" "items_db" {
+resource "aws_db_instance" "ms_medicamentos_db" {
   identifier = var.db_instance_identifier
 
   engine         = "postgres"

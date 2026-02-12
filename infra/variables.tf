@@ -6,12 +6,12 @@ variable "aws_region" {
 
 variable "api_name" {
   type    = string
-  default = "items-http-api"
+  default = "ms_medicamentos-http-api"
 }
 
 variable "db_name" {
   type        = string
-  default     = "itemsdb"
+  default     = "ms_medicamentosdb"
   description = "Nome do banco de dados"
 }
 
@@ -30,7 +30,7 @@ variable "db_password" {
 
 variable "db_instance_identifier" {
   description = "Identificador da instância RDS"
-  default     = "items-db"
+  default     = "ms_medicamentos-db"
 }
 
 variable "db_instance_class" {
@@ -50,7 +50,7 @@ variable "db_engine_version" {
 
 variable "lambda_function_name" {
   description = "Nome da função Lambda"
-  default     = "items-api-lambda"
+  default     = "ms_medicamentos-lambda"
 }
 
 variable "lambda_runtime" {

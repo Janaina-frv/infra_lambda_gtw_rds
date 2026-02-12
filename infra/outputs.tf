@@ -10,12 +10,12 @@ output "subnet_ids" {
 
 output "lambda_function_name" {
   description = "Nome da Lambda function"
-  value       = aws_lambda_function.items.function_name
+  value       = aws_lambda_function.ms_medicamentos.function_name
 }
 
 output "rds_endpoint" {
   description = "Endpoint do RDS"
-  value       = aws_db_instance.items_db.address
+  value       = aws_db_instance.ms_medicamentos_db.address
 }
 
 output "api_endpoint" {

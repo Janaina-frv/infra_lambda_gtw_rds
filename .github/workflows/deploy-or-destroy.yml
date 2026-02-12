@@ -16,14 +16,14 @@ jobs:
     env:
       TF_ACTION: apply  # apply | destroy
       AWS_REGION: us-east-1
-      LAMBDA_RESOURCE_NAME: items
-      LAMBDA_FUNCTION_NAME: items-api-lambda
+      LAMBDA_RESOURCE_NAME: ms_medicamentos
+      LAMBDA_FUNCTION_NAME: ms_medicamentos-lambda
       VPC_RESOURCE_NAME: this_vpc
-      API_NAME: items-http-api
+      API_NAME: ms_medicamentos-http-api
       API_RESOURCE_NAME: http_api
       RDS_SG_RESOURCE_NAME: rds_sg
-      DB_INSTANCE_IDENTIFIER: items-db
-      RDS_DB_RESOURCE_NAME: items_db
+      DB_INSTANCE_IDENTIFIER: ms_medicamentos-db
+      RDS_DB_RESOURCE_NAME: ms_medicamentos_db
 
     steps:
       # Iniciando e configurando
@@ -33,7 +33,7 @@ jobs:
       - name: Autenticar com AWS via OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::757367947438:role/GitHubOIDCRole
+          role-to-assume: arn:aws:iam::043391333434:role/GitHubOIDCRole
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Verificar modo de operação
@@ -62,7 +62,7 @@ jobs:
       - name: Verificar IAM Role pelo Name
         id: get_iam_role
         run: |
-          ROLE_NAME="lambda-java-items-api-role"
+          ROLE_NAME="lambda-java-ms_medicamentos-api-role"
           if aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
             echo "✅ IAM Role encontrada: $ROLE_NAME"
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -514,11 +514,11 @@ jobs:
             -target=aws_iam_role_policy_attachment.lambda_sqs_attach \
             -auto-approve
 
-      - name: Instalar Java e compilar (modo apply)
+      - name: Instalar Java 21 e compilar Lambda
         if: env.TF_ACTION == 'apply'
         uses: actions/setup-java@v3
         with:
-          java-version: '17'
+          java-version: '21'       # compatível com runtime Lambda
           distribution: 'temurin'
 
       - name: Compilar Lambda com Maven
@@ -530,7 +530,8 @@ jobs:
         if: env.TF_ACTION == 'apply'
         run: |
           mkdir -p infra/build/lambda
-          cp lambda/target/function.zip infra/build/lambda/function.zip
+          cp lambda/target/ms-medicamentos-0.0.1-SNAPSHOT.jar infra/build/lambda/ms-medicamentos-0.0.1-SNAPSHOT.jar
+
 
       # APPLY - Executar da Lambda
       - name: APPLY - Executar da Lambda
@@ -557,7 +558,9 @@ jobs:
           
           echo "Criando rotas..."
           terraform apply \
-            -target=aws_apigatewayv2_route.post_items \
+            -target=aws_apigatewayv2_route.post_usuario_medicamento \
+            -target=aws_apigatewayv2_route.put_estoque \
+            -target=aws_apigatewayv2_route.get_estoque_por_nome \
             -auto-approve
           
           echo "Criando stage..."

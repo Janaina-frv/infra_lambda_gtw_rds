@@ -3,7 +3,7 @@
 #####################################
 
 resource "aws_iam_role" "lambda_exec_role" {
-  name = "lambda-java-items-api-role"
+  name = "lambda-java-ms_medicamentos-api-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -43,7 +43,7 @@ resource "aws_iam_policy" "lambda_sqs_policy" {
         Action = [
           "sqs:SendMessage"
         ]
-        Resource = "arn:aws:sqs:us-east-1:757367947438:feedback_urgente-sqs"
+        Resource = "arn:aws:sqs:us-east-1:043391333434:ms-medicamentos-sqs"
       }
     ]
   })
